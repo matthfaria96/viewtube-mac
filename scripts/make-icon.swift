@@ -3,11 +3,28 @@
 //
 // Parente do ícone do YouTube Music (fundo vermelho, anel branco, play no centro), mas próprio:
 // squircle do macOS em degradê rosa → vermelho, anel partido em dois arcos (os dois modos) e
-// play de cantos arredondados.
+// play de cantos arredondados. Borda de vidro (aro escuro por dentro e reflexo no topo) como os
+// outros apps do witchmymac: sem ela, o vermelho chapado até a borda parecia maior que os irmãos.
 import AppKit
 
 let size: CGFloat = 1024
 let output = CommandLine.arguments.dropFirst().first ?? "icon.png"
+
+/// Squircle de cantos contínuos (superelipse n = 5), o mesmo perfil de canto dos ícones da Apple.
+func squircle(in rect: CGRect, exponent n: CGFloat = 5, steps: Int = 720) -> CGPath {
+    let path = CGMutablePath()
+    let a = rect.width / 2, b = rect.height / 2
+    for i in 0...steps {
+        let t = CGFloat(i) / CGFloat(steps) * 2 * .pi
+        let c = cos(t), s = sin(t)
+        let x = pow(abs(c), 2 / n) * a * (c < 0 ? -1 : 1)
+        let y = pow(abs(s), 2 / n) * b * (s < 0 ? -1 : 1)
+        let point = CGPoint(x: rect.midX + x, y: rect.midY + y)
+        i == 0 ? path.move(to: point) : path.addLine(to: point)
+    }
+    path.closeSubpath()
+    return path
+}
 
 func roundedTriangle(center: CGPoint, radius: CGFloat, corner: CGFloat) -> CGPath {
     let points = (0..<3).map { i -> CGPoint in
@@ -25,37 +42,58 @@ func roundedTriangle(center: CGPoint, radius: CGFloat, corner: CGFloat) -> CGPat
 
 let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { _ in
     guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
-    // Corpo no grid da Apple: 824 px centrados, cantos contínuos.
+    // Corpo no grid da Apple: 824 px centrados.
     let body = CGRect(x: 100, y: 100, width: 824, height: 824)
-    let shape = NSBezierPath(roundedRect: body, xRadius: 186, yRadius: 186)
+    let shape = squircle(in: body)
 
     ctx.saveGState()
     ctx.setShadow(offset: CGSize(width: 0, height: -14), blur: 30, color: NSColor.black.withAlphaComponent(0.35).cgColor)
-    NSColor.black.setFill()
-    shape.fill()
+    ctx.addPath(shape)
+    ctx.setFillColor(NSColor.black.cgColor)
+    ctx.fillPath()
     ctx.restoreGState()
 
     ctx.saveGState()
-    shape.addClip()
-    // Fundo: rosa no alto à esquerda → vermelho → vermelho escuro embaixo à direita.
+    ctx.addPath(shape)
+    ctx.clip()
+    // Fundo: rosa no alto à esquerda → vermelho → vermelho escuro embaixo à direita (um tom mais fundo).
     NSGradient(colors: [
-        NSColor(srgbRed: 1.00, green: 0.42, blue: 0.60, alpha: 1),
-        NSColor(srgbRed: 0.96, green: 0.13, blue: 0.24, alpha: 1),
-        NSColor(srgbRed: 0.72, green: 0.04, blue: 0.16, alpha: 1),
+        NSColor(srgbRed: 0.97, green: 0.34, blue: 0.50, alpha: 1),
+        NSColor(srgbRed: 0.88, green: 0.09, blue: 0.21, alpha: 1),
+        NSColor(srgbRed: 0.55, green: 0.02, blue: 0.11, alpha: 1),
     ])!.draw(in: body, angle: -50)
     // Brilho suave no topo (vidro).
-    NSGradient(colors: [NSColor.white.withAlphaComponent(0.22), NSColor.white.withAlphaComponent(0)])!
-        .draw(in: CGRect(x: body.minX, y: body.midY + 40, width: body.width, height: body.height / 2 - 40), angle: -90)
+    NSGradient(colors: [NSColor.white.withAlphaComponent(0.16), NSColor.white.withAlphaComponent(0)])!
+        .draw(in: CGRect(x: body.minX, y: body.midY + 60, width: body.width, height: body.height / 2 - 60), angle: -90)
+    // Aro escuro por dentro: fecha o ícone nas bordas.
+    ctx.addPath(shape)
+    ctx.setLineWidth(40)
+    ctx.setStrokeColor(NSColor(srgbRed: 0.25, green: 0, blue: 0.06, alpha: 0.16).cgColor)
+    ctx.strokePath()
+    ctx.addPath(shape)
+    ctx.setLineWidth(8)
+    ctx.setStrokeColor(NSColor(srgbRed: 0.18, green: 0, blue: 0.04, alpha: 0.22).cgColor)
+    ctx.strokePath()
+    ctx.restoreGState()
+
+    // Reflexo fino no aro, mais forte no alto (vidro).
+    ctx.saveGState()
+    ctx.addPath(squircle(in: body.insetBy(dx: 5, dy: 5)))
+    ctx.setLineWidth(3)
+    ctx.replacePathWithStrokedPath()
+    ctx.clip()
+    NSGradient(colors: [NSColor.white.withAlphaComponent(0.45), NSColor.white.withAlphaComponent(0.05), NSColor.white.withAlphaComponent(0.12)])!
+        .draw(in: body, angle: -90)
     ctx.restoreGState()
 
     let center = CGPoint(x: 512, y: 512)
     // Anel em dois arcos com aberturas opostas: YouTube ⇄ Music.
     ctx.saveGState()
-    ctx.setShadow(offset: CGSize(width: 0, height: -6), blur: 18, color: NSColor.black.withAlphaComponent(0.18).cgColor)
+    ctx.setShadow(offset: CGSize(width: 0, height: -8), blur: 20, color: NSColor.black.withAlphaComponent(0.25).cgColor)
     ctx.setStrokeColor(NSColor.white.cgColor)
-    ctx.setLineWidth(46)
+    ctx.setLineWidth(40)
     ctx.setLineCap(.round)
-    let ringRadius: CGFloat = 262
+    let ringRadius: CGFloat = 238
     let gap: CGFloat = 0.30   // radianos de cada abertura
     for start in [CGFloat.pi * 0.25, CGFloat.pi * 1.25] {
         ctx.addArc(center: center, radius: ringRadius, startAngle: start + gap / 2,
@@ -63,7 +101,7 @@ let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { _
         ctx.strokePath()
     }
     // Play de cantos arredondados, um pouco à direita para ficar opticamente centrado.
-    ctx.addPath(roundedTriangle(center: CGPoint(x: 530, y: 512), radius: 150, corner: 38))
+    ctx.addPath(roundedTriangle(center: CGPoint(x: 528, y: 512), radius: 136, corner: 34))
     ctx.setFillColor(NSColor.white.cgColor)
     ctx.fillPath()
     ctx.restoreGState()

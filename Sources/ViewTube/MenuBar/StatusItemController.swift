@@ -69,7 +69,7 @@ final class StatusItemController: NSObject {
         item.button?.toolTip = "ViewTube"
     }
 
-    /// Capa (16 px, cantos arredondados) e o título cortado em ~22 letras.
+    /// Capa (15 px, cantos arredondados) e o título cortado em ~22 letras.
     private func show(_ badge: TrackBadge) {
         artworkTask?.cancel()
         guard !badge.title.isEmpty else { return showIdle() }
@@ -87,7 +87,7 @@ final class StatusItemController: NSObject {
     }
 
     private static func thumbnail(_ image: NSImage) -> NSImage {
-        let size: CGFloat = 16
+        let size: CGFloat = 15   // mesma altura visual dos ícones vizinhos na barra
         return NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
             NSBezierPath(roundedRect: rect, xRadius: 3.5, yRadius: 3.5).addClip()
             // Recorte central quadrado (capas de clipe são 16:9).

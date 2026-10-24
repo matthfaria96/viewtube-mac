@@ -197,5 +197,5 @@ App macOS (Swift, AppKit + SwiftUI) que embrulha youtube.com e music.youtube.com
 - O usuário tem um monitor em retrato (1080×1920) onde a janela costuma ficar: a tela cheia ali já é vertical.
 
 ## Ícone e Sobre
-- Ícone do Dock: `swift scripts/make-icon.swift saida.png` (1024 px) → iconset via `sips` → `iconutil -c icns` em `Resources/AppIcon.icns` (+ `Resources/AppIcon.png`). Parente do YouTube Music (vermelho, anel branco, play), mas próprio: squircle em degradê rosa → vermelho, anel em dois arcos (os dois modos), play arredondado.
+- Ícone do Dock: `swift scripts/make-icon.swift saida.png` (1024 px) → iconset via `sips` → `iconutil -c icns` em `Resources/AppIcon.icns` (+ `Resources/AppIcon.png`). Parente do YouTube Music (vermelho, anel branco, play), mas próprio: squircle em degradê rosa → vermelho, anel em dois arcos (os dois modos), play arredondado. Desde a 1.0.1: canto contínuo da Apple (superelipse n = 5), vermelho mais fundo, aro escuro discreto e reflexo de vidro, anel menor. Sem isso, o vermelho chapado até a borda parecia maior que os ícones dos outros apps (o tamanho era o mesmo: corpo de 824/1024).
 - Sobre (`Settings/AboutView.swift`): padrão do MacDash — ícone 96 px com sombra, nome, versão, descrição, GPL/não afiliado, witchmymac.com e "Licenças e créditos" (folha com SponsorBlock, LRCLIB, Pear Desktop, Mooziac, YouTube).
