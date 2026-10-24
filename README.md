@@ -38,7 +38,15 @@ Requires macOS 14 or later. Liquid Glass on macOS 26 and later.
 
 ## Install
 
-Download the DMG from [Releases](https://github.com/matthfaria96/viewtube-mac/releases) or from [witchmymac.com](https://witchmymac.com), then drag ViewTube to Applications. The app is not notarized: the first time, right-click it and choose Open.
+Download the DMG from [Releases](https://github.com/matthfaria96/viewtube-mac/releases) or from [witchmymac.com](https://witchmymac.com), then drag ViewTube to Applications.
+
+The app is not notarized, so macOS blocks it the first time. To allow it, paste this into Terminal:
+
+```sh
+xattr -dr com.apple.quarantine "/Applications/ViewTube.app"
+```
+
+It only removes the "downloaded from the internet" mark from ViewTube. Without Terminal: open the app, click OK on the warning, then go to System Settings → Privacy & Security and click Open Anyway.
 
 ## Keyboard shortcuts
 
