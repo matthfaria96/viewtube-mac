@@ -28,8 +28,10 @@ if [[ "${SKIP_TESTS:-0}" != "1" ]]; then
   swift test --filter ViewTubeCoreTests
 fi
 
-swift build -c release "${SWIFT_FLAGS[@]}"
-BIN="$(swift build -c release "${SWIFT_FLAGS[@]}" --show-bin-path)/$NAME"
+# Universal: Apple Silicon e Intel.
+ARCHS=(--arch arm64 --arch x86_64)
+swift build -c release "${ARCHS[@]}" "${SWIFT_FLAGS[@]}"
+BIN="$(swift build -c release "${ARCHS[@]}" "${SWIFT_FLAGS[@]}" --show-bin-path)/$NAME"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
