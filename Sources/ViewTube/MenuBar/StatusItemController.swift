@@ -2,7 +2,8 @@ import AppKit
 import Combine
 import SwiftUI
 
-/// Item da barra de menus: a capa e o começo do nome do que está tocando (sem nada tocando, o ícone).
+/// Item da barra de menus: barras de som animadas e o começo do nome do que está tocando (paradas e
+/// baixas quando pausado; sem nada tocando, o ícone).
 /// Clicar abre o mini player num painel preso logo abaixo do item, como os menus do sistema (não um
 /// balão solto); fecha ao clicar fora, com Esc ou clicando de novo no item.
 @MainActor
@@ -11,7 +12,8 @@ final class StatusItemController: NSObject {
     private let panel: NSPanel
     private var monitors: [Any] = []
     private var cancellables: Set<AnyCancellable> = []
-    private var artworkTask: Task<Void, Never>?
+    private var equalizer: Timer?
+    private var equalizerStart = Date()
     private let glass = NSVisualEffectView()
     private let makeContent: () -> NSView
 
@@ -50,52 +52,92 @@ final class StatusItemController: NSObject {
 
         // Só redesenha o item quando algo visível muda (o estado chega ~1×/s).
         player.$state
-            .map { state in TrackBadge(title: state.hasMedia ? state.title : "", artwork: state.hasMedia ? state.artworkURL : nil) }
+            .map { state in TrackBadge(title: state.hasMedia ? state.title : "", playing: state.hasMedia && state.isPlaying) }
             .removeDuplicates()
             .sink { [weak self] badge in self?.show(badge) }
             .store(in: &cancellables)
     }
 
     deinit {
-        let item = item
-        MainActor.assumeIsolated { NSStatusBar.system.removeStatusItem(item) }
+        let item = item, equalizer = equalizer
+        MainActor.assumeIsolated {
+            equalizer?.invalidate()
+            NSStatusBar.system.removeStatusItem(item)
+        }
     }
 
     // MARK: - Item
 
     private func showIdle() {
+        stopEqualizer()
         item.button?.image = NSImage(systemSymbolName: "play.rectangle.on.rectangle", accessibilityDescription: "ViewTube")
         item.button?.title = ""
         item.button?.toolTip = "ViewTube"
     }
 
-    /// Capa (15 px, cantos arredondados) e o título cortado em ~22 letras.
+    /// Barras de som e o título cortado em ~22 letras.
     private func show(_ badge: TrackBadge) {
-        artworkTask?.cancel()
         guard !badge.title.isEmpty else { return showIdle() }
         let title = badge.title
         let short = title.count > Self.titleLength
             ? String(title.prefix(Self.titleLength - 1)).trimmingCharacters(in: .whitespaces) + "…" : title
         item.button?.title = " " + short
         item.button?.toolTip = title
-        item.button?.image = AvatarCache.shared.cached(badge.artwork).map(Self.thumbnail)
-            ?? NSImage(systemSymbolName: "music.note", accessibilityDescription: nil)
-        artworkTask = Task { [weak self] in
-            guard let image = await AvatarCache.shared.load(badge.artwork), !Task.isCancelled else { return }
-            self?.item.button?.image = Self.thumbnail(image)
-        }
+        badge.playing ? startEqualizer() : stopEqualizer()
     }
 
-    private static func thumbnail(_ image: NSImage) -> NSImage {
-        let size: CGFloat = 15   // mesma altura visual dos ícones vizinhos na barra
-        return NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
-            NSBezierPath(roundedRect: rect, xRadius: 3.5, yRadius: 3.5).addClip()
-            // Recorte central quadrado (capas de clipe são 16:9).
-            let side = min(image.size.width, image.size.height)
-            let source = NSRect(x: (image.size.width - side) / 2, y: (image.size.height - side) / 2, width: side, height: side)
-            image.draw(in: rect, from: source, operation: .sourceOver, fraction: 1)
+    // MARK: - Barras de som
+
+    /// Tocando: as barras sobem e descem (12 quadros/s, só enquanto toca). Pausado: paradas e baixas.
+    private func startEqualizer() {
+        guard equalizer == nil else { return }
+        equalizerStart = Date()
+        let timer = Timer(timeInterval: 1.0 / 12, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.drawEqualizer() }
+        }
+        RunLoop.main.add(timer, forMode: .common)   // segue animando com o menu ou o painel aberto
+        equalizer = timer
+        drawEqualizer()
+    }
+
+    private func stopEqualizer() {
+        equalizer?.invalidate()
+        equalizer = nil
+        item.button?.image = Self.bars(heights: Self.pausedHeights)
+    }
+
+    private func drawEqualizer() {
+        let t = Date().timeIntervalSince(equalizerStart)
+        // Cada barra num ritmo próprio: o conjunto não se repete de forma óbvia.
+        let heights = Self.speeds.enumerated().map { index, speed in
+            0.3 + 0.7 * abs(sin(t * speed + Double(index) * 1.3))
+        }
+        item.button?.image = Self.bars(heights: heights)
+    }
+
+    private static let speeds: [Double] = [5.1, 6.7, 4.3, 5.9]
+    private static let pausedHeights: [Double] = [0.3, 0.5, 0.38, 0.24]
+
+    /// Quatro barras arredondadas que crescem a partir do centro, em imagem template (o sistema pinta
+    /// de claro ou escuro conforme a barra de menus), na altura dos ícones vizinhos.
+    private static func bars(heights: [Double]) -> NSImage {
+        let size = NSSize(width: 15, height: 15)
+        let barWidth: CGFloat = 2.4, gap: CGFloat = 1.5
+        let image = NSImage(size: size, flipped: false) { rect in
+            NSColor.black.setFill()
+            let total = barWidth * CGFloat(heights.count) + gap * CGFloat(heights.count - 1)
+            var x = (rect.width - total) / 2
+            for value in heights {
+                let height = max(barWidth, rect.height * CGFloat(value))
+                let bar = NSRect(x: x, y: (rect.height - height) / 2, width: barWidth, height: height)
+                NSBezierPath(roundedRect: bar, xRadius: barWidth / 2, yRadius: barWidth / 2).fill()
+                x += barWidth + gap
+            }
             return true
         }
+        image.isTemplate = true
+        image.accessibilityDescription = "Tocando no ViewTube"
+        return image
     }
 
     // MARK: - Painel
@@ -153,5 +195,5 @@ final class StatusItemController: NSObject {
 
 private struct TrackBadge: Equatable {
     let title: String
-    let artwork: URL?
+    let playing: Bool
 }

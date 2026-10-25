@@ -185,6 +185,7 @@ App macOS (Swift, AppKit + SwiftUI) que embrulha youtube.com e music.youtube.com
 - Barra: ☰ e a pílula ‹ › são um item só (`LeadingControls`, 6 px entre eles, igual à direita); identificador `MainToolbar.v5`.
 - Home do Music estreita (container ≤ 720 px): continua em duas colunas com reticências, linhas compactas e "Bombando" em duas fileiras de capas de 132 px (112 px ≤ 520). As regras ficam **no fim** do CSS: antes das regras-base, perdiam na cascata. Container query não estiliza o próprio container: o respiro lateral usa `@media (max-width: 600px)`.
 - Testes de clique: **nunca clicar de verdade com outra janela na frente** (o navegador do usuário costuma estar por cima; um clique já caiu nele). O `trustedClick` sintetizado numa janela inativa também só a ativa: testar recolher/abrir do Music com a janela atrás não prova nada.
+- **Item da barra de menus** (1.0.2, pedido: "barras de som subindo e descendo ao invés da capa"): tocando, quatro barras template animadas a partir do centro (12 quadros/s, `Timer` no modo `.common`, só enquanto toca) + título; pausado, barras paradas e baixas; sem mídia, o símbolo do app. A capa saiu do item (o mini player continua com ela).
 
 ## Build e testes
 
