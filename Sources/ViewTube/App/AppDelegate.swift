@@ -23,6 +23,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         mainWindow.show()
+        // Capturas do site (witchmymac.com), só com VIEWTUBE_SHOWCASE: a janela flutua sobre as
+        // outras sem ativar o app, para a página não ficar oculta (document.hidden). Ver CLAUDE.md.
+        if ProcessInfo.processInfo.environment["VIEWTUBE_SHOWCASE"] != nil {
+            mainWindow.window?.level = .floating
+        }
         // Links recebidos durante a abertura chegam antes daqui; abrem no lugar da sessão salva.
         player.start(with: launchRequest)
         didStart = true
