@@ -55,6 +55,10 @@ struct AboutView: View {
                     .font(.system(size: 12))
             }
             .padding(.top, 10)
+
+            CheckForUpdatesButton()
+                .controlSize(.small)
+                .padding(.top, 14)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 36)
@@ -75,6 +79,9 @@ private struct CreditsView: View {
     }
 
     private let credits = [
+        Credit(name: "Sparkle",
+               detail: "Atualizações dentro do app (Verificar Atualizações…). Licença MIT, © Andy Matuschak e colaboradores.",
+               link: "https://github.com/sparkle-project/Sparkle"),
         Credit(name: "SponsorBlock",
                detail: "Trechos marcados pela comunidade. Dados sob licença CC BY-NC-SA 4.0.",
                link: "https://sponsor.ajay.app"),
@@ -97,7 +104,7 @@ private struct CreditsView: View {
             Text("Licenças e créditos")
                 .font(.system(size: 17, weight: .semibold))
                 .padding(.bottom, 4)
-            Text("O ViewTube não inclui código de terceiros. Estes são os serviços que ele usa e os projetos que o inspiraram.")
+            Text("O ViewTube inclui o Sparkle (MIT) para as atualizações. Estes são os serviços e o código que ele usa e os projetos que o inspiraram.")
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .padding(.bottom, 16)

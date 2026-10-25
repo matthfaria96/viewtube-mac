@@ -16,6 +16,11 @@
     <key>NSHighResolutionCapable</key><true/>
     <key>NSSupportsAutomaticTermination</key><false/>
     <key>NSHumanReadableCopyright</key><string>GPL-3.0 · witchmymac.com</string>
+    <key>SUFeedURL</key><string>https://witchmymac.com/appcast/viewtube.xml</string>
+    <key>SUPublicEDKey</key><string>yhoDaYLDki5BV0c44pefouDhxbliuGqLKxXKXXK1Pb0=</string>
+    <key>SUEnableAutomaticChecks</key><true/>
+    <key>SUScheduledCheckInterval</key><integer>86400</integer>
+    <key>SUAutomaticallyUpdate</key><false/>
     <key>CFBundleURLTypes</key>
     <array>
         <dict>

@@ -208,6 +208,10 @@ App macOS (Swift, AppKit + SwiftUI) que embrulha youtube.com e music.youtube.com
 - Inspeção do DOM: compilar com `scripts/build-app.sh --install --devtools` e ligar `defaults write com.witchmymac.viewtube devEval -bool YES`. Isso habilita `viewtube://eval?js=…` (resultado no log, mensagem "eval:") e `viewtube://devsize?w=&h=`. **Sempre reinstalar sem `--devtools` e desligar a chave ao terminar**: com isso ativo, qualquer site poderia rodar JS na sessão do usuário.
 - O usuário tem um monitor em retrato (1080×1920) onde a janela costuma ficar: a tela cheia ali já é vertical.
 
+## Atualizações (Sparkle 2)
+- `Updates/AppUpdater.swift` (como no Sirena/Wineup): "Verificar Atualizações…" no menu do app e no Sobre, verificação diária. Feed `https://witchmymac.com/appcast/viewtube.xml` e `SUPublicEDKey` no `Resources/Info.plist`; o `build-app.sh` embute `Sparkle.framework`. Cópias com outro bundle id só verificam com `VIEWTUBE_UPDATES=1`.
+- Publicar: `~/Documents/witchmymac-release/UPDATES.md` (sign-app.sh, make-dmg.sh, make-appcast-item.sh). A versão vem da tag e o build do número de commits: criar a tag antes de compilar.
+
 ## Ícone e Sobre
 - Ícone do Dock: `swift scripts/make-icon.swift saida.png` (1024 px) → iconset via `sips` → `iconutil -c icns` em `Resources/AppIcon.icns` (+ `Resources/AppIcon.png`). Parente do YouTube Music (vermelho, anel branco, play), mas próprio: squircle em degradê rosa → vermelho, anel em dois arcos (os dois modos), play arredondado. Desde a 1.0.1: canto contínuo da Apple (superelipse n = 5), vermelho mais fundo, aro escuro discreto e reflexo de vidro, anel menor. Sem isso, o vermelho chapado até a borda parecia maior que os ícones dos outros apps (o tamanho era o mesmo: corpo de 824/1024).
 - Sobre (`Settings/AboutView.swift`): padrão do MacDash — ícone 96 px com sombra, nome, versão, descrição, GPL/não afiliado, witchmymac.com e "Licenças e créditos" (folha com SponsorBlock, LRCLIB, Pear Desktop, Mooziac, YouTube).

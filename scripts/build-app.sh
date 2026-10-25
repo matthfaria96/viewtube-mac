@@ -38,6 +38,10 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/$NAME"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+# Sparkle (atualizações dentro do app) é o único framework dinâmico.
+mkdir -p "$APP/Contents/Frameworks"
+ditto "$(dirname "$BIN")/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
+install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/$NAME"
 
 # Versão: última tag (v1.2.3 -> 1.2.3); build: número de commits.
 VERSION="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')" || true
@@ -54,6 +58,7 @@ if [[ -n "$SDK_VERSION" ]]; then
     -output "$APP/Contents/MacOS/$NAME" "$APP/Contents/MacOS/$NAME"
 fi
 
+codesign --force --sign - "$APP/Contents/Frameworks/Sparkle.framework"
 codesign --force --sign - "$APP"
 echo "Pronto: $APP ($VERSION, build $BUILD)"
 

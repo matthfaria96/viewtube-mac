@@ -19,6 +19,7 @@ enum MainMenu {
     private static func appMenu(_ d: AppDelegate) -> NSMenu {
         let menu = NSMenu(title: "ViewTube")
         menu.addItem(item("Sobre o ViewTube", #selector(AppDelegate.showAbout), target: d))
+        menu.addItem(item("Verificar Atualizações…", #selector(AppUpdater.checkForUpdates(_:)), target: AppUpdater.shared))
         menu.addItem(.separator())
         menu.addItem(item("Ajustes…", #selector(AppDelegate.showSettings), ",", target: d))
         menu.addItem(.separator())

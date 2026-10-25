@@ -32,6 +32,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             .removeDuplicates()
             .sink { [weak self] show in self?.updateStatusItem(show) }
             .store(in: &cancellables)
+        // Atualizações (Sparkle): verificação diária e o item Verificar Atualizações….
+        AppUpdater.shared.start()
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
