@@ -1,5 +1,7 @@
 # ViewTube
 
+English · [Português](README.pt-BR.md)
+
 YouTube and YouTube Music in one light, native macOS app.
 
 ![ViewTube playing a video in YouTube mode](docs/youtube.jpg)
