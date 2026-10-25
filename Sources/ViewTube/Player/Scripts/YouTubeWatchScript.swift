@@ -93,8 +93,16 @@ enum YouTubeWatchScript {
       const saved = () => { try { const t = localStorage.getItem(KEY); return TABS.includes(t) ? t : 'comments'; } catch (_) { return 'comments'; } };
       const oneColumn = () => !!flexy() && !flexy().hasAttribute('is-two-columns_');
       // O site carrega comentários (e mais sugestões) quando a janela rola; com a coluna rolando
-      // sozinha, a janela não rola: a rolagem da coluna avisa o site.
-      const nudge = () => { window.dispatchEvent(new Event('scroll')); window.dispatchEvent(new Event('resize')); };
+      // sozinha, a janela não rola: a rolagem da coluna avisa o site com um "scroll" (no máximo um por
+      // quadro). Sem "resize" aqui: ele fazia o YouTube recalcular a página inteira, player incluso, a
+      // cada rolagem e ao abrir um vídeo (a coluna volta ao topo), e parecia um F5.
+      let nudgeFrame = 0;
+      const nudge = () => {
+        if (nudgeFrame) return;
+        nudgeFrame = requestAnimationFrame(() => { nudgeFrame = 0; window.dispatchEvent(new Event('scroll')); });
+      };
+      // Trocar de aba mostra um conteúdo que estava escondido: aí sim um "resize", uma vez.
+      const reveal = () => { window.dispatchEvent(new Event('scroll')); window.dispatchEvent(new Event('resize')); };
       let watchedPrimary = null;
       let current = saved();
       let bar = null;
@@ -105,7 +113,8 @@ enum YouTubeWatchScript {
         html.setAttribute('vt-yt-tab', tab);
         bar?.querySelectorAll('button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
         if (remember) { try { localStorage.setItem(KEY, tab); } catch (_) {} }
-        setTimeout(nudge, 60);   // a aba que apareceu pode precisar carregar
+        if (remember) setTimeout(reveal, 60);   // a aba que o usuário abriu pode precisar carregar
+        else nudge();
       };
 
       const build = () => {

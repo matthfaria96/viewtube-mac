@@ -191,6 +191,7 @@ App macOS (Swift, AppKit + SwiftUI) que embrulha youtube.com e music.youtube.com
 - **Carrossel "A seguir"**: sem `scroll-behavior: smooth` (a roda vira rolagem lateral e cada evento reiniciava a animação); cards com `content-visibility: auto` e esqueleto da capa no fundo. A home do Music também usa `content-visibility` nos cards e linhas.
 - Testes visuais: o WebKit marca a página como escondida quando a janela está coberta e os scripts param (`document.hidden`); medir layout só com a janela realmente visível.
 - **Retorno ao clicar numa música/vídeo** (`ClickFeedbackScript`, pedido: "clico e não acontece nada, não tem informativo"): o item ganha contorno rosa pulsando (`[vt-opening]`) e uma pílula discreta embaixo (`#viewtube-toast`) diz "Abrindo “título”…"; ao trocar a faixa vira "Tocando" e some; sem troca em 8 s, "Não abriu. Tente de novo.". Itens que só abrem página (álbum, canal) e a faixa que já toca ficam de fora.
+- **Sem `resize` falso na rolagem** (1.0.3): o `nudge` da página de vídeo do YouTube disparava `scroll` + `resize` a cada rolagem da coluna e ao abrir um vídeo (a coluna volta ao topo); o `resize` fazia o YouTube recalcular a página inteira ("parece um F5"). Agora a rolagem só manda `scroll` (um por quadro); o `resize` sai uma vez, quando o usuário troca de aba.
 
 ## Build e testes
 
