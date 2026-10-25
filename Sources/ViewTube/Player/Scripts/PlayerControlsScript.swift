@@ -375,13 +375,23 @@ enum PlayerControlsScript {
         }
         update();
       };
-      let mountedIn = null;
-      const mountObserver = new MutationObserver(() => { if (!document.hidden) mount(); });
+      let mountedIn = null, mountFrame = 0, mountBudget = 0, budgetAt = 0;
+      // Só reage quando o site mexe (as mudanças do próprio cartão não contam), no máximo uma vez por
+      // quadro e poucas por segundo: nunca entra num vai e volta com o redesenho do site.
+      const mountObserver = new MutationObserver((records) => {
+        if (document.hidden || mountFrame) return;
+        const onlyCard = records.every((r) => [...r.addedNodes, ...r.removedNodes].every((n) => n === card));
+        if (onlyCard) return;
+        const now = performance.now();
+        if (now - budgetAt > 1000) { budgetAt = now; mountBudget = 0; }
+        if (++mountBudget > 8) return;
+        mountFrame = requestAnimationFrame(() => { mountFrame = 0; mount(); });
+      });
 
       ['timeupdate', 'play', 'pause', 'durationchange', 'volumechange'].forEach((name) =>
         document.addEventListener(name, () => { if (card?.isConnected) update(); }, true));
-      // Troca de faixa/vídeo: o site refaz partes da página. Por ~2,5 s confere a cada quadro (o intervalo
-      // normal é bem maior), para nada aparecer fora do lugar por um instante e voltar.
+      // Troca de faixa/vídeo: o site refaz partes da página. Por ~2,5 s confere a cada 0,1 s (o intervalo
+      // normal é bem maior). A cada quadro brigava com o redesenho do site e deixava a troca lenta.
       let burstUntil = 0, burstFrame = 0;
       const burst = () => {
         burstUntil = performance.now() + 2500;
@@ -390,9 +400,9 @@ enum PlayerControlsScript {
           burstFrame = 0;
           if (document.hidden) return;
           mount();
-          if (performance.now() < burstUntil) burstFrame = requestAnimationFrame(tick);
+          if (performance.now() < burstUntil) burstFrame = setTimeout(tick, 100);
         };
-        burstFrame = requestAnimationFrame(tick);
+        burstFrame = setTimeout(tick, 0);
       };
       ['loadstart', 'emptied'].forEach((name) => document.addEventListener(name, (e) => {
         if (e.target instanceof HTMLMediaElement) burst();

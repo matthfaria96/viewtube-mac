@@ -158,8 +158,8 @@ enum YouTubeWatchScript {
         if (expander && !expander.hasAttribute('is-expanded')) expander.querySelector('#expand')?.click();
       };
 
-      // Troca de faixa/vídeo: o site refaz partes da página. Por ~2,5 s confere a cada quadro (o intervalo
-      // normal é bem maior), para nada aparecer fora do lugar por um instante e voltar.
+      // Troca de faixa/vídeo: o site refaz partes da página. Por ~2,5 s confere a cada 0,1 s (o intervalo
+      // normal é bem maior). A cada quadro brigava com o redesenho do site e deixava a troca lenta.
       let burstUntil = 0, burstFrame = 0;
       const burst = () => {
         burstUntil = performance.now() + 2500;
@@ -168,9 +168,9 @@ enum YouTubeWatchScript {
           burstFrame = 0;
           if (document.hidden) return;
           ensure();
-          if (performance.now() < burstUntil) burstFrame = requestAnimationFrame(tick);
+          if (performance.now() < burstUntil) burstFrame = setTimeout(tick, 100);
         };
-        burstFrame = requestAnimationFrame(tick);
+        burstFrame = setTimeout(tick, 0);
       };
       ['yt-navigate-start', 'yt-navigate-finish', 'yt-page-data-updated'].forEach((name) => document.addEventListener(name, burst));
       setInterval(() => { if (!document.hidden) ensure(); }, 700);

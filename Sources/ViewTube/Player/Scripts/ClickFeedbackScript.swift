@@ -9,12 +9,9 @@ enum ClickFeedbackScript {
     static let source = script.replacingOccurrences(of: "__VT_CLICK_CSS__", with: StyleScript.jsString(css))
 
     private static let css = """
-    [vt-opening] { position: relative; }
-    [vt-opening]::after {
-      content: ''; position: absolute; inset: 0; border-radius: 10px; pointer-events: none; z-index: 5;
-      box-shadow: inset 0 0 0 2px #ff6b9e; animation: vt-opening-pulse 1s ease-in-out infinite;
-    }
-    @keyframes vt-opening-pulse { 50% { box-shadow: inset 0 0 0 2px rgba(255, 107, 158, .4), inset 0 0 22px rgba(255, 107, 158, .28); } }
+    /* Contorno no próprio item (sem pseudo-elemento nem mudar posicionamento), pulsando na cor. */
+    [vt-opening] { outline: 2px solid #ff6b9e !important; outline-offset: -2px; border-radius: 10px; animation: vt-opening-pulse 1s ease-in-out infinite; }
+    @keyframes vt-opening-pulse { 50% { outline-color: rgba(255, 107, 158, .35); } }
     #viewtube-toast {
       position: fixed; left: 50%; bottom: 84px; z-index: 2300; display: flex; align-items: center; gap: 9px;
       max-width: min(420px, calc(100vw - 48px)); padding: 9px 16px 9px 12px; border-radius: 999px;
