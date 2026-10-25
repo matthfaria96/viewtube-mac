@@ -40,15 +40,19 @@ Requer macOS 14 ou mais novo. Liquid Glass a partir do macOS 26.
 
 ## Instalar
 
-Baixe o DMG em [Releases](https://github.com/matthfaria96/viewtube-mac/releases) ou em [witchmymac.com](https://witchmymac.com) e arraste o ViewTube para Aplicativos.
+Escolha um:
 
-O app não é notarizado, então o macOS bloqueia na primeira vez. Para liberar, cole isto no Terminal:
-
-```sh
-xattr -dr com.apple.quarantine "/Applications/ViewTube.app"
-```
-
-Ele só tira do ViewTube a marca de "baixado da internet". Sem Terminal: abra o app, clique em OK no aviso e depois vá em Ajustes do Sistema → Privacidade e Segurança → Abrir Mesmo Assim.
+1. **Terminal, uma linha (recomendado).** Cole isto no Terminal:
+   ```sh
+   curl -fsSL https://witchmymac.com/install.sh | bash -s viewtube
+   ```
+   Ele baixa a versão mais nova do GitHub, confere o SHA-256, instala o ViewTube em Aplicativos e abre. Não aparece aviso do macOS, porque arquivos baixados pelo `curl` não ganham a marca de "baixado da internet". Rode a mesma linha de novo para atualizar. O script é aberto: [install.sh](https://witchmymac.com/install.sh).
+2. **Baixe o DMG** em [Releases](https://github.com/matthfaria96/viewtube-mac/releases) ou em [witchmymac.com](https://witchmymac.com), arraste o ViewTube para Aplicativos e libere uma vez com:
+   ```sh
+   xattr -dr com.apple.quarantine "/Applications/ViewTube.app"
+   ```
+   Ele só tira daquele app a marca de "baixado da internet".
+3. **Baixe o DMG** e libere pelos Ajustes do Sistema: abra o app, clique em OK no aviso e vá em Ajustes do Sistema → Privacidade e Segurança → Abrir Mesmo Assim.
 
 ## Atalhos de teclado
 
