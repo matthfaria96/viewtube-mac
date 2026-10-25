@@ -179,7 +179,7 @@ enum PlayerPageScript {
       }, { passive: false, capture: true });
 
       // Carrossel (empilhado): clicar e arrastar rola para os lados, com um pouco de inércia ao soltar.
-      // O arraste nativo do item (que não levava a nada) fica bloqueado, e um arraste não vira clique.
+      // O arraste nativo do item e o reordenar da fila do Music ficam bloqueados, e um arraste não vira clique.
       const carousel = (target) => document.documentElement.hasAttribute('vt-stacked')
         && target.closest?.('ytmusic-player-page ytmusic-player-queue#queue');
       let drag = null, inertia = 0, suppressClick = false;
@@ -191,8 +191,14 @@ enum PlayerPageScript {
         e.preventDefault();   // sem seleção de texto nem arraste nativo
         drag = { strip, x: e.clientX, left: strip.scrollLeft, moved: false, lastX: e.clientX, lastT: performance.now(), v: 0 };
       }, true);
+      // O Music reordena a fila arrastando o item (por JS, não pelo arraste nativo): enquanto o
+      // botão estiver apertado no carrossel, o movimento é só nosso e nenhum card sai do lugar.
+      ['pointermove', 'touchmove'].forEach((name) => document.addEventListener(name, (e) => {
+        if (drag) e.stopImmediatePropagation();
+      }, true));
       document.addEventListener('mousemove', (e) => {
         if (!drag) return;
+        e.stopImmediatePropagation();
         if (e.buttons === 0) { endDrag(); return; }   // soltou fora da janela
         const dx = e.clientX - drag.x;
         if (!drag.moved && Math.abs(dx) < 5) return;
@@ -225,6 +231,17 @@ enum PlayerPageScript {
       document.addEventListener('mouseup', endDrag, true);
       document.addEventListener('click', (e) => {
         if (suppressClick && carousel(e.target)) { e.preventDefault(); e.stopImmediatePropagation(); }
+      }, true);
+      // Item do "A seguir": o Music só troca a faixa pelo botão de play (32 px no meio da capa); o
+      // título e o resto do card não faziam nada. O card inteiro toca, menos o menu (⋮) e "Salvar".
+      document.addEventListener('click', (e) => {
+        if (!e.isTrusted || e.button !== 0) return;
+        const item = e.target.closest?.('ytmusic-player-page ytmusic-player-queue-item');
+        if (!item || item.hasAttribute('selected')) return;
+        if (e.target.closest('ytmusic-play-button-renderer, ytmusic-menu-renderer, yt-button-shape, button, a[href]')) return;
+        // Depois do clique: o Music marca o item como atual na hora, e o aviso "Abrindo…" o ignoraria.
+        const play = item.querySelector('ytmusic-play-button-renderer');
+        if (play) setTimeout(() => play.click(), 0);
       }, true);
       document.addEventListener('click', (e) => {
         if (e.isTrusted && e.target.closest?.('ytmusic-player-page tp-yt-paper-tab')) userPickedTab = true;

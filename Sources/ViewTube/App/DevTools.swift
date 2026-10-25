@@ -23,6 +23,25 @@ enum DevTools {
             }
             return true
         }
+        if url.scheme == "viewtube", url.host == "devclick" {
+            // viewtube://devclick?x=&y= — clique de sistema entregue só à página (coordenadas da página),
+            // para testar o que o Music só aceita com clique real, sem mexer no mouse.
+            let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            let value = { (name: String) in items.first { $0.name == name }?.value.flatMap(Double.init) }
+            if isEnabled, let window = webView.window, let x = value("x"), let y = value("y") {
+                let scale = webView.pageZoom * webView.magnification
+                let local = NSPoint(x: x * scale, y: webView.isFlipped ? y * scale : webView.bounds.height - y * scale)
+                let location = webView.convert(local, to: nil)
+                for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+                    guard let event = NSEvent.mouseEvent(with: type, location: location, modifierFlags: [],
+                                                         timestamp: ProcessInfo.processInfo.systemUptime,
+                                                         windowNumber: window.windowNumber, context: nil, eventNumber: 0,
+                                                         clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0) else { continue }
+                    if type == .leftMouseDown { webView.mouseDown(with: event) } else { webView.mouseUp(with: event) }
+                }
+            }
+            return true
+        }
         guard url.scheme == "viewtube", url.host == "eval" else { return false }
         guard isEnabled,
               let js = URLComponents(url: url, resolvingAgainstBaseURL: false)?

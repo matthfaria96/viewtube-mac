@@ -507,15 +507,36 @@ enum BridgeScript {
       // da barra do app abre, e ele aparece em vidro por cima do conteúdo.
       // O guia pode abrir sozinho alguns segundos depois de carregar: vigia por 10 s e fecha
       // sempre que ele aparecer aberto, a menos que o próprio usuário o tenha aberto pelo ☰.
-      let guideChecks = 0;
+      // O Music fecha o guia deslizando para fora da tela (x negativo) com a largura intacta: conta
+      // só a parte visível. Depois de alternar, espera a animação, e no máximo 3 vezes: se a detecção
+      // falhar de novo com uma mudança do site, nunca vira um abre e fecha sem parar.
+      const musicGuide = () => document.querySelector('ytmusic-app-layout #guide-wrapper');
+      const musicGuideOpen = () => {
+        const rect = musicGuide()?.getBoundingClientRect();
+        return !!rect && rect.width > 150 && rect.right > 150;
+      };
+      let guideChecks = 0, guideToggles = 0, guideWait = 0;
       window.__viewtubeGuideByUser = false;
       const closeGuide = setInterval(() => {
-        if (++guideChecks > 20 || window.__viewtubeGuideByUser) return clearInterval(closeGuide);
+        if (++guideChecks > 20 || window.__viewtubeGuideByUser || guideToggles >= 3) return clearInterval(closeGuide);
+        if (guideWait > 0) { guideWait--; return; }
         const open = isMusic
-          ? (document.querySelector('ytmusic-app-layout #guide-wrapper')?.getBoundingClientRect().width || 0) > 150
+          ? musicGuideOpen()
           : !!document.querySelector('ytd-app')?.hasAttribute('guide-persistent-and-visible');
-        if (open) toggleGuide();
+        if (!open) return;
+        toggleGuide();
+        guideToggles++;
+        guideWait = 2;
       }, 500);
+      // O guia do Music é fixo (não é gaveta) e o nosso CSS o põe por cima do conteúdo: clicar fora
+      // dele não fechava. Fecha como a gaveta do YouTube, e o clique só fecha (não aciona o que está atrás).
+      if (isMusic) document.addEventListener('click', (e) => {
+        if (!e.isTrusted || !musicGuideOpen() || musicGuide().contains(e.target)) return;
+        if (e.target.closest?.('ytmusic-popup-container, tp-yt-iron-dropdown, tp-yt-paper-dialog')) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        toggleGuide();
+      }, true);
       // Promoção escondida pelo nosso CSS (aviso "Em sintonia com você!" etc.) deixa o diálogo dela
       // aberto e invisível; no Music isso marca o app inteiro como `inert` e nenhum clique funciona.
       // Diálogo aberto com o conteúdo escondido: dispensa pelo botão dele (ou fecha).
