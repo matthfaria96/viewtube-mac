@@ -178,6 +178,54 @@ enum PlayerPageScript {
         e.preventDefault();
       }, { passive: false, capture: true });
 
+      // Carrossel (empilhado): clicar e arrastar rola para os lados, com um pouco de inércia ao soltar.
+      // O arraste nativo do item (que não levava a nada) fica bloqueado, e um arraste não vira clique.
+      const carousel = (target) => document.documentElement.hasAttribute('vt-stacked')
+        && target.closest?.('ytmusic-player-page ytmusic-player-queue#queue');
+      let drag = null, inertia = 0, suppressClick = false;
+      document.addEventListener('dragstart', (e) => { if (carousel(e.target)) e.preventDefault(); }, true);
+      document.addEventListener('mousedown', (e) => {
+        const strip = e.button === 0 && carousel(e.target);
+        if (!strip) return;
+        cancelAnimationFrame(inertia);
+        e.preventDefault();   // sem seleção de texto nem arraste nativo
+        drag = { strip, x: e.clientX, left: strip.scrollLeft, moved: false, lastX: e.clientX, lastT: performance.now(), v: 0 };
+      }, true);
+      document.addEventListener('mousemove', (e) => {
+        if (!drag) return;
+        if (e.buttons === 0) { endDrag(); return; }   // soltou fora da janela
+        const dx = e.clientX - drag.x;
+        if (!drag.moved && Math.abs(dx) < 5) return;
+        if (!drag.moved) { drag.moved = true; drag.strip.style.cursor = 'grabbing'; }
+        drag.strip.scrollLeft = drag.left - dx;
+        const now = performance.now();
+        drag.v = (e.clientX - drag.lastX) / Math.max(1, now - drag.lastT);   // px/ms
+        drag.lastX = e.clientX; drag.lastT = now;
+      }, true);
+      const endDrag = () => {
+        if (!drag) return;
+        const { strip, moved } = drag;
+        // Parou antes de soltar: sem inércia.
+        let v = performance.now() - drag.lastT > 80 ? 0 : drag.v;
+        drag = null;
+        strip.style.cursor = '';
+        if (!moved) return;
+        suppressClick = true;
+        setTimeout(() => { suppressClick = false; }, 0);
+        // Inércia: continua na mesma direção e desacelera.
+        let last = performance.now();
+        const glide = (now) => {
+          const dt = now - last; last = now;
+          strip.scrollLeft -= v * dt;
+          v *= Math.pow(0.94, dt / 16);
+          if (Math.abs(v) > 0.02) inertia = requestAnimationFrame(glide);
+        };
+        if (Math.abs(v) > 0.1) inertia = requestAnimationFrame(glide);
+      };
+      document.addEventListener('mouseup', endDrag, true);
+      document.addEventListener('click', (e) => {
+        if (suppressClick && carousel(e.target)) { e.preventDefault(); e.stopImmediatePropagation(); }
+      }, true);
       document.addEventListener('click', (e) => {
         if (e.isTrusted && e.target.closest?.('ytmusic-player-page tp-yt-paper-tab')) userPickedTab = true;
       }, true);
