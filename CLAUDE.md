@@ -190,6 +190,7 @@ App macOS (Swift, AppKit + SwiftUI) que embrulha youtube.com e music.youtube.com
 - **Letra longa**: a linha atual cresce 3%, então `#viewtube-lyrics p` tem `margin-right: 3.5%` (antes a ponta era cortada). `fitLines()` reduz a fonte só daquela música (`--vt-fit`, mínimo 0,62) quando uma linha passa de 3 linhas ou não cabe; refaz quando a largura da caixa muda.
 - **Carrossel "A seguir"**: sem `scroll-behavior: smooth` (a roda vira rolagem lateral e cada evento reiniciava a animação); cards com `content-visibility: auto` e esqueleto da capa no fundo. A home do Music também usa `content-visibility` nos cards e linhas.
 - Testes visuais: o WebKit marca a página como escondida quando a janela está coberta e os scripts param (`document.hidden`); medir layout só com a janela realmente visível.
+- **Retorno ao clicar numa música/vídeo** (`ClickFeedbackScript`, pedido: "clico e não acontece nada, não tem informativo"): o item ganha contorno rosa pulsando (`[vt-opening]`) e uma pílula discreta embaixo (`#viewtube-toast`) diz "Abrindo “título”…"; ao trocar a faixa vira "Tocando" e some; sem troca em 8 s, "Não abriu. Tente de novo.". Itens que só abrem página (álbum, canal) e a faixa que já toca ficam de fora.
 
 ## Build e testes
 

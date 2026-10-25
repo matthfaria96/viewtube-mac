@@ -246,7 +246,7 @@ final class WebPlayer: NSObject {
     private static func installScripts(in controller: WKUserContentController, config: PageConfig) {
         controller.removeAllUserScripts()
         let start = [config.bootstrapScript, BridgeScript.adPrune]
-        let end = [BridgeScript.source, StyleScript.source, PortraitScript.source, LyricsScript.source, PlayerPageScript.source, PlayerControlsScript.source, YouTubeMiniScript.source, MusicHomeScript.source, AccountScript.source, YouTubeWatchScript.source, MusicImmersiveScript.source]
+        let end = [BridgeScript.source, StyleScript.source, PortraitScript.source, LyricsScript.source, PlayerPageScript.source, PlayerControlsScript.source, YouTubeMiniScript.source, MusicHomeScript.source, AccountScript.source, YouTubeWatchScript.source, MusicImmersiveScript.source, ClickFeedbackScript.source]
         for source in start {
             controller.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         }
