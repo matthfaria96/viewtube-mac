@@ -75,8 +75,8 @@ enum MusicImmersiveScript {
       mask-image: linear-gradient(transparent, #000 12%, #000 70%, transparent);
     }
     html[vt-layout][vt-immersive] #viewtube-immersive #viewtube-lyrics p {
-      font-size: clamp(20px, min(3.2vh, 4.6vw), 34px); line-height: 1.3; margin-bottom: 22px; color: rgba(255, 255, 255, .38);
-      transform-origin: center center; overflow-wrap: anywhere;
+      font-size: calc(clamp(20px, min(3.2vh, 4.6vw), 34px) * var(--vt-fit, 1)); line-height: 1.3; margin-bottom: 22px; color: rgba(255, 255, 255, .38);
+      transform-origin: center center; margin-right: 0; overflow-wrap: break-word;
     }
     html[vt-layout][vt-immersive] #viewtube-immersive #viewtube-lyrics p.active { color: #fff; transform: scale(1.04); }
     html[vt-layout][vt-immersive] #viewtube-immersive .vt-lyrics-message { padding: 4vh 0 0; color: rgba(255, 255, 255, .6); }

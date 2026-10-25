@@ -366,11 +366,38 @@ enum PlayerControlsScript {
         if (!card) build();
         const placed = point.first ? point.parent.firstElementChild === card : card.parentElement === point.parent;
         if (!placed) point.first ? point.parent.prepend(card) : point.parent.appendChild(card);
+        // O site mexe nesse trecho ao trocar de faixa: o observador recoloca o cartão antes de a tela
+        // ser desenhada (esperar o intervalo deixava o conteúdo subir e descer).
+        if (point.parent !== mountedIn) {
+          mountObserver.disconnect();
+          mountObserver.observe(point.parent, { childList: true });
+          mountedIn = point.parent;
+        }
         update();
       };
+      let mountedIn = null;
+      const mountObserver = new MutationObserver(() => { if (!document.hidden) mount(); });
 
       ['timeupdate', 'play', 'pause', 'durationchange', 'volumechange'].forEach((name) =>
         document.addEventListener(name, () => { if (card?.isConnected) update(); }, true));
+      // Troca de faixa/vídeo: o site refaz partes da página. Por ~2,5 s confere a cada quadro (o intervalo
+      // normal é bem maior), para nada aparecer fora do lugar por um instante e voltar.
+      let burstUntil = 0, burstFrame = 0;
+      const burst = () => {
+        burstUntil = performance.now() + 2500;
+        if (burstFrame) return;
+        const tick = () => {
+          burstFrame = 0;
+          if (document.hidden) return;
+          mount();
+          if (performance.now() < burstUntil) burstFrame = requestAnimationFrame(tick);
+        };
+        burstFrame = requestAnimationFrame(tick);
+      };
+      ['loadstart', 'emptied'].forEach((name) => document.addEventListener(name, (e) => {
+        if (e.target instanceof HTMLMediaElement) burst();
+      }, true));
+      ['yt-navigate-start', 'yt-navigate-finish', 'yt-page-data-updated'].forEach((name) => document.addEventListener(name, burst));
       // Abrir/recolher (Music) muda o tamanho do vídeo: o quadro pausado só redesenha com um resize.
       let wasOpen = null;
       setInterval(() => {

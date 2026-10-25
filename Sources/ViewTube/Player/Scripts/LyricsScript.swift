@@ -45,8 +45,13 @@ enum LyricsScript {
       };
 
       const message = (text, spinner) => {
-        const wrap = el('div', 'vt-lyrics-message');
-        if (spinner) wrap.appendChild(el('div', 'vt-lyrics-spinner'));
+        const wrap = el('div', spinner ? 'vt-lyrics-message loading' : 'vt-lyrics-message');
+        // Carregando: linhas-esqueleto de larguras variadas (o texto fica para leitores de tela).
+        if (spinner) [72, 54, 86, 63, 47, 78].forEach((width) => {
+          const bar = el('div', 'vt-lyrics-skeleton');
+          bar.style.width = `${width}%`;
+          wrap.appendChild(bar);
+        });
         wrap.appendChild(el('p', '', text));
         return wrap;
       };
@@ -130,6 +135,7 @@ enum LyricsScript {
           box = buildLines();
           if (data.source) box.appendChild(el('p', 'vt-lyrics-source', `Letra: ${data.source}`));
           body.appendChild(box);
+          fitLines();
           watchBox();
           highlight(true);
         }
@@ -163,12 +169,35 @@ enum LyricsScript {
         nextTimer = setTimeout(highlight, Math.max(16, wait * 1000 + 10));
       };
       const recenter = () => { lastIndex = -1; highlight(true); };
+      // Letra fora do comum (palavra longa que não quebra, ou linha que ocupa linhas demais) seria
+      // cortada na borda: reduz a fonte só desta música, na medida para caber. A próxima volta ao normal.
+      const FIT_MIN = 0.62, MAX_ROWS = 3;
+      const fitLines = () => {
+        if (!box || !box.isConnected || box.clientWidth <= 0) return;
+        box.style.setProperty('--vt-fit', '1');
+        box.classList.remove('vt-break');
+        let fit = 1;
+        box.querySelectorAll('p:not(.vt-lyrics-source):not(.plain)').forEach((p) => {
+          if (p.clientWidth > 0 && p.scrollWidth > p.clientWidth + 1) fit = Math.min(fit, p.clientWidth / p.scrollWidth);
+          const row = parseFloat(getComputedStyle(p).lineHeight) || 0;
+          const rows = row > 0 ? Math.round(p.offsetHeight / row) : 0;
+          if (rows > MAX_ROWS) fit = Math.min(fit, MAX_ROWS / rows + 0.08);
+        });
+        if (fit >= 1) return;
+        // Folga para a linha atual, que cresce 3–4% ao acender.
+        fit = Math.max(FIT_MIN, fit * 0.96);
+        box.style.setProperty('--vt-fit', fit.toFixed(3));
+        // No limite, uma palavra ainda maior que a caixa quebra em vez de ser cortada.
+        const still = [...box.querySelectorAll('p')].some((p) => p.scrollWidth > p.clientWidth + 1);
+        box.classList.toggle('vt-break', still);
+      };
       const watchBox = () => {
         if (!box || typeof ResizeObserver === 'undefined') return;
         resizeObserver?.disconnect();
-        let lastHeight = -1;
+        let lastHeight = -1, lastWidth = -1;
         resizeObserver = new ResizeObserver(() => {
-          const height = box.clientHeight;
+          const height = box.clientHeight, width = box.clientWidth;
+          if (width !== lastWidth && width > 0) { lastWidth = width; fitLines(); }
           if (height === lastHeight) return;
           lastHeight = height;
           if (height <= 0) return;

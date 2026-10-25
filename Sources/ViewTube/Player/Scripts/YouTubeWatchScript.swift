@@ -149,6 +149,21 @@ enum YouTubeWatchScript {
         if (expander && !expander.hasAttribute('is-expanded')) expander.querySelector('#expand')?.click();
       };
 
+      // Troca de faixa/vídeo: o site refaz partes da página. Por ~2,5 s confere a cada quadro (o intervalo
+      // normal é bem maior), para nada aparecer fora do lugar por um instante e voltar.
+      let burstUntil = 0, burstFrame = 0;
+      const burst = () => {
+        burstUntil = performance.now() + 2500;
+        if (burstFrame) return;
+        const tick = () => {
+          burstFrame = 0;
+          if (document.hidden) return;
+          ensure();
+          if (performance.now() < burstUntil) burstFrame = requestAnimationFrame(tick);
+        };
+        burstFrame = requestAnimationFrame(tick);
+      };
+      ['yt-navigate-start', 'yt-navigate-finish', 'yt-page-data-updated'].forEach((name) => document.addEventListener(name, burst));
       setInterval(() => { if (!document.hidden) ensure(); }, 700);
       ensure();
     })();

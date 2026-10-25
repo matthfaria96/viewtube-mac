@@ -129,12 +129,11 @@ enum PlayerPageScript {
         ensureMore();
         ensureMusicTabs();
         ensureQueueArrows();
-        // Faixa nova: a grade volta a mostrar só 3 linhas e Relacionados pode abrir de novo.
+        // Faixa nova: Relacionados pode abrir de novo (a grade "A seguir" fica como o usuário deixou).
         const id = videoId();
         if (id && id !== lastVideo) {
           lastVideo = id;
           autoSelected = false;
-          queueBox()?.classList.remove('vt-expanded');
         }
         // Embaixo fica Relacionados aberto (A seguir já está em cima). Uma vez por faixa e nunca
         // por cima de uma escolha do usuário.
@@ -182,6 +181,23 @@ enum PlayerPageScript {
       document.addEventListener('click', (e) => {
         if (e.isTrusted && e.target.closest?.('ytmusic-player-page tp-yt-paper-tab')) userPickedTab = true;
       }, true);
+      // Troca de faixa/vídeo: o site refaz partes da página. Por ~2,5 s confere a cada quadro (o intervalo
+      // normal é bem maior), para nada aparecer fora do lugar por um instante e voltar.
+      let burstUntil = 0, burstFrame = 0;
+      const burst = () => {
+        burstUntil = performance.now() + 2500;
+        if (burstFrame) return;
+        const tick = () => {
+          burstFrame = 0;
+          if (document.hidden) return;
+          update();
+          if (performance.now() < burstUntil) burstFrame = requestAnimationFrame(tick);
+        };
+        burstFrame = requestAnimationFrame(tick);
+      };
+      ['loadstart', 'emptied'].forEach((name) => document.addEventListener(name, (e) => {
+        if (e.target instanceof HTMLMediaElement) burst();
+      }, true));
       setInterval(() => { if (!document.hidden) update(); }, 700);
     })();
     """#

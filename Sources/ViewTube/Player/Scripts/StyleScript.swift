@@ -221,7 +221,9 @@ enum StyleScript {
        linha só, rolagem lateral), para a letra subir. */
     html[vt-layout][vt-stacked] ytmusic-player-page ytmusic-player-queue#queue {
       display: flex !important; flex-wrap: nowrap !important; gap: 12px; overflow-x: auto !important; overflow-y: hidden !important;
-      scroll-behavior: smooth; scrollbar-width: none; padding-bottom: 2px;
+      overscroll-behavior-x: contain; scrollbar-width: none; padding-bottom: 2px;
+      /* Sem rolagem suave aqui: a roda vira rolagem lateral e cada evento reiniciava a animação (travava).
+         As setas pedem a rolagem suave por conta própria. */
     }
     html[vt-layout][vt-stacked] ytmusic-player-page ytmusic-player-queue#queue::-webkit-scrollbar { display: none; }
     html[vt-layout][vt-stacked] ytmusic-player-page ytmusic-player-queue :is(#contents, #automix-contents) {
@@ -254,10 +256,13 @@ enum StyleScript {
     html[vt-layout][vt-stacked] ytmusic-player-page ytmusic-queue-header-renderer ytmusic-chip-cloud-chip-renderer yt-icon {
       width: 18px !important; height: 18px !important; margin: 0 !important;
     }
-    html[vt-layout][vt-stacked] ytmusic-player-queue-item {
+    html[vt-layout][vt-stacked] ytmusic-player-queue ytmusic-player-queue-item {
       display: flex !important; flex-direction: column !important; align-items: stretch !important; flex: none !important;
-      width: 160px !important; height: auto !important; padding: 0 !important; gap: 6px; background: transparent !important;
+      width: 160px !important; height: auto !important; padding: 0 !important; gap: 6px;
       box-shadow: none !important; cursor: pointer;
+      /* Só desenha os cards perto da tela (a fila tem ~100); até lá, o esqueleto da capa no lugar. */
+      content-visibility: auto; contain-intrinsic-size: 160px 132px;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='90'%3E%3Crect width='160' height='90' rx='8' fill='%23ffffff' fill-opacity='.07'/%3E%3C/svg%3E") 0 0 / 160px 90px no-repeat !important;
     }
     html[vt-layout][vt-stacked] ytmusic-player-queue-item :is(.left-items, yt-img-shadow.thumbnail, .thumbnail img, ytmusic-item-thumbnail-overlay-renderer, ytmusic-item-thumbnail-overlay-renderer #content) {
       width: 160px !important; height: 90px !important; border-radius: 8px !important;
@@ -347,7 +352,8 @@ enum StyleScript {
     }
     html[vt-layout][vt-stacked][vt-music-tab="lyrics"] ytmusic-player-page #tab-renderer > :not(div):not(dom-if) { display: none !important; }
     html[vt-layout][vt-stacked][vt-lyrics-on]:not([vt-music-tab="lyrics"]):has(ytmusic-player-page[player-page-open]) #viewtube-lyrics-section { display: none !important; }
-    html[vt-layout][vt-stacked] #viewtube-lyrics-section:has(.vt-lyrics-message) { height: auto; }
+    /* Sem letra, o bloco encolhe; carregando a próxima, mantém a altura (sem o layout pular na troca de faixa). */
+    html[vt-layout][vt-stacked] #viewtube-lyrics-section:has(.vt-lyrics-message:not(.loading)) { height: auto; }
     html[vt-layout][vt-stacked] #viewtube-lyrics-section .vt-lyrics-message { padding: 28px 16px 8px; flex: none; }
 
     .vt-lyrics-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -359,6 +365,15 @@ enum StyleScript {
       width: 30px; height: 30px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, .14);
       border-top-color: #ff6b9e; animation: vt-spin .9s linear infinite;
     }
+    /* Carregando: linhas-esqueleto no lugar da letra, com brilho correndo (mostra que algo está vindo). */
+    .vt-lyrics-message.loading { align-items: stretch; justify-content: flex-start; gap: 18px; padding: 14px 4px 0; }
+    .vt-lyrics-message.loading > p { display: none; }
+    .vt-lyrics-skeleton {
+      height: 22px; border-radius: 8px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, .06) 25%, rgba(255, 255, 255, .13) 50%, rgba(255, 255, 255, .06) 75%);
+      background-size: 200% 100%; animation: vt-lyrics-shimmer 1.4s linear infinite;
+    }
+    @keyframes vt-lyrics-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
     @keyframes vt-spin { to { transform: rotate(360deg); } }
     /* Modo teatro (Music): vídeo na largura toda, altura limitada à janela, como no YouTube. */
     html[vt-layout][vt-theater] ytmusic-player-page ytmusic-player#player:not([player-ui-state="MINIPLAYER"]) {
@@ -375,12 +390,15 @@ enum StyleScript {
     }
     #viewtube-lyrics::-webkit-scrollbar { display: none; }
     #viewtube-lyrics p {
-      margin: 0 0 16px; font-family: inherit; font-size: 24px; font-weight: 700; line-height: 1.32;
+      margin: 0 0 16px; font-family: inherit; font-size: calc(24px * var(--vt-fit, 1)); font-weight: 700; line-height: 1.32;
       color: rgba(255, 255, 255, .34); cursor: pointer; transition: color .25s ease, transform .25s ease;
       transform-origin: left center;
+      /* A linha atual cresce 3%: a folga à direita impede que uma linha longa seja cortada na borda. */
+      margin-right: 3.5%; overflow-wrap: break-word;
     }
     #viewtube-lyrics p:hover { color: rgba(255, 255, 255, .7); }
     #viewtube-lyrics p.active { color: #fff; transform: scale(1.03); }
+    #viewtube-lyrics.vt-break p { overflow-wrap: anywhere; }
     /* Fonte da letra, discreta, no fim. */
     #viewtube-lyrics p.vt-lyrics-source {
       margin: 28px 0 0 !important; font-size: 12px !important; font-weight: 500 !important; line-height: 1.4 !important;

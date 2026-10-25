@@ -112,6 +112,9 @@ enum MusicHomeStyle {
     }
     #viewtube-home .vt-cards::-webkit-scrollbar { display: none; }
     #viewtube-home .vt-card { display: flex; flex-direction: column; min-width: 0; scroll-snap-align: start; }
+    /* Só desenha o que está perto da tela (capas e linhas fora dela ficam reservadas, sem custo). */
+    #viewtube-home .vt-card { content-visibility: auto; contain-intrinsic-size: 172px 230px; }
+    #viewtube-home .vt-song { content-visibility: auto; contain-intrinsic-size: auto 60px; }
     #viewtube-home .vt-card .vt-cover { width: 100%; height: auto; aspect-ratio: 1; border-radius: 10px; }
     #viewtube-home .vt-card .vt-cover svg { width: 46px; height: 46px; }
     #viewtube-home .vt-card .vt-title { margin-top: 10px; }
