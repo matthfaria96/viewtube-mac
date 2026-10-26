@@ -180,10 +180,27 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSToolba
     private var pageLoading = false
     private var skeletonShownAt: Date?
     private var skeletonShowTask: Task<Void, Never>?
+    /// Esqueleto fixado pela ferramenta de desenvolvimento (`viewtube://devskeleton`): o automático não mexe.
+    private var skeletonPinned = false
+
+    /// Só em builds `--devtools` com `devEval` (ver DevTools.skeletonPin).
+    func pinSkeleton(_ pin: DevTools.SkeletonPin) {
+        skeletonShowTask?.cancel()
+        skeletonShownAt = nil
+        if let shape = pin.shape {
+            skeletonPinned = true
+            container?.setLoading(false, animated: false)
+            container?.setLoading(true, mode: pin.mode, shape: shape, frozen: !pin.animated, alpha: pin.alpha)
+        } else {
+            skeletonPinned = false
+            container?.setLoading(false, animated: false)
+        }
+    }
 
     /// Esqueleto aparece se a espera passar de 120 ms (sem piscar em trocas instantâneas) e, uma vez
     /// visível, fica pelo menos 300 ms (sem relance).
     private func refreshSkeleton() {
+        guard !skeletonPinned else { return }
         // Formato do que está chegando: troca de modo diz se vem cheio ou recolhido; carga de página
         // decide pelo endereço (vídeo = página do player).
         let shape: LoadingSkeletonView.Shape

@@ -120,26 +120,41 @@ final class PlayerContainerView: NSView {
     }()
     private var skeleton: NSView?
 
-    /// Esqueleto cinza animado por cima da página enquanto ela carrega; some com esmaecimento.
-    func setLoading(_ loading: Bool, mode: PlayerMode = .youtube, shape: LoadingSkeletonView.Shape = .player) {
+    /// Esqueleto cinza animado por cima da página enquanto ela carrega. Sai num esmaecimento (a página
+    /// já está desenhada por baixo, com a mesma geometria): troca limpa, sem salto de layout.
+    /// `frozen`/`alpha` só para a ferramenta de desenvolvimento (esqueleto parado, translúcido).
+    func setLoading(_ loading: Bool, mode: PlayerMode = .youtube, shape: LoadingSkeletonView.Shape = .player,
+                    frozen: Bool = false, alpha: CGFloat = 1, animated: Bool = true) {
+        let root = LoadingSkeletonView(mode: mode, shape: shape, frozen: frozen)
         if loading, let current = skeleton as? NSHostingView<LoadingSkeletonView> {
-            current.rootView = LoadingSkeletonView(mode: mode, shape: shape)
-            current.alphaValue = 1
+            current.rootView = root
+            current.layer?.removeAllAnimations()
+            current.alphaValue = alpha
             return
         }
         if loading, skeleton == nil {
-            let view = NSHostingView(rootView: LoadingSkeletonView(mode: mode, shape: shape))
+            let view = NSHostingView(rootView: root)
             view.translatesAutoresizingMaskIntoConstraints = false
+            // Entra num esmaecimento curto (sem relance); parado (ferramenta de desenvolvimento), direto.
+            view.alphaValue = frozen ? alpha : 0
             addSubview(view, positioned: .below, relativeTo: toast)
             NSLayoutConstraint.activate([
                 view.leadingAnchor.constraint(equalTo: leadingAnchor), view.trailingAnchor.constraint(equalTo: trailingAnchor),
                 view.topAnchor.constraint(equalTo: topAnchor), view.bottomAnchor.constraint(equalTo: bottomAnchor),
             ])
             skeleton = view
+            if !frozen {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.14
+                    view.animator().alphaValue = alpha
+                }
+            }
         } else if !loading, let view = skeleton {
             skeleton = nil
+            guard animated else { view.removeFromSuperview(); return }
             NSAnimationContext.runAnimationGroup({ context in
-                context.duration = 0.25
+                context.duration = 0.32
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
                 view.animator().alphaValue = 0
             }, completionHandler: { view.removeFromSuperview() })
         }

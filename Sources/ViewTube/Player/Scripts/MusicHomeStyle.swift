@@ -127,12 +127,30 @@ enum MusicHomeStyle {
     }
     #viewtube-home .vt-empty p { flex: 1; margin: 0; }
     #viewtube-home .vt-empty > svg { flex: none; width: 28px; height: 28px; fill: #ff6b9e; }
-    #viewtube-home .vt-skel-row, #viewtube-home .vt-skel-card {
-      border-radius: 10px; background: linear-gradient(90deg, rgba(255, 255, 255, .05) 25%, rgba(255, 255, 255, .1) 50%, rgba(255, 255, 255, .05) 75%);
+    /* Esqueleto no formato do conteúdo: capa (com brilho) + linhas de título/artista nos mesmos lugares
+       de uma linha (60 px, capa de 48 em x=8) e de um cartão (capa quadrada + três linhas). */
+    #viewtube-home .vt-skel-row::before, #viewtube-home .vt-skel-card::before {
+      content: ''; display: block; background: linear-gradient(90deg, rgba(255, 255, 255, .05) 25%, rgba(255, 255, 255, .1) 50%, rgba(255, 255, 255, .05) 75%);
       background-size: 200% 100%; animation: vt-home-shimmer 1.4s linear infinite;
     }
-    #viewtube-home .vt-skel-row { height: 56px; margin: 2px 0; }
-    #viewtube-home .vt-skel-card { aspect-ratio: 1 / 1.28; }
+    #viewtube-home .vt-skel-row { position: relative; height: 60px; }
+    #viewtube-home .vt-skel-row::before { position: absolute; left: 8px; top: 6px; width: 48px; height: 48px; border-radius: 6px; }
+    #viewtube-home .vt-skel-row::after {
+      content: ''; position: absolute; left: 68px; top: 16px; width: min(170px, 60%); height: 30px;
+      background: linear-gradient(rgba(255, 255, 255, .08), rgba(255, 255, 255, .08)) 0 0 / 100% 13px no-repeat,
+                  linear-gradient(rgba(255, 255, 255, .05), rgba(255, 255, 255, .05)) 0 20px / 62% 10px no-repeat;
+    }
+    #viewtube-home .vt-skel-card { display: flex; flex-direction: column; min-width: 0; }
+    #viewtube-home .vt-skel-card::before { aspect-ratio: 1; border-radius: 10px; }
+    #viewtube-home .vt-skel-card::after {
+      content: ''; display: block; margin-top: 12px; height: 46px;
+      background: linear-gradient(rgba(255, 255, 255, .08), rgba(255, 255, 255, .08)) 0 0 / 76% 13px no-repeat,
+                  linear-gradient(rgba(255, 255, 255, .05), rgba(255, 255, 255, .05)) 0 20px / 56% 10px no-repeat,
+                  linear-gradient(rgba(255, 255, 255, .04), rgba(255, 255, 255, .04)) 0 37px / 46% 9px no-repeat;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #viewtube-home .vt-skel-row::before, #viewtube-home .vt-skel-card::before { animation: none; }
+    }
     @keyframes vt-home-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
     /* Janela estreita: continua em duas colunas (textos com reticências), linhas mais compactas e os

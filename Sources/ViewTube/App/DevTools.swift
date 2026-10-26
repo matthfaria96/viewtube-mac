@@ -1,5 +1,6 @@
 import AppKit
 import WebKit
+import ViewTubeCore
 
 /// Ferramenta de desenvolvimento: `viewtube://eval?js=<código>` roda JS na página e grava o
 /// resultado no log (subsystem com.witchmymac.viewtube); `viewtube://devsize?w=&h=` redimensiona.
@@ -28,6 +29,36 @@ enum DevTools {
                 }
             }
         }
+        #endif
+    }
+
+    /// Esqueleto fixo por cima da página (capturas e conferência de layout): `shape` nil = tirar.
+    struct SkeletonPin {
+        let mode: PlayerMode
+        let shape: LoadingSkeletonView.Shape?
+        let alpha: Double
+        /// Com brilho (`anim=1`); o padrão é parado, para capturas.
+        let animated: Bool
+    }
+
+    /// `viewtube://devskeleton?mode=youtube|music&shape=player|browse|off&alpha=0.5[&anim=1]`: mostra o
+    /// esqueleto (parado, sem brilho, a menos que `anim=1`) por cima da página carregada, para comparar a geometria dos dois na mesma
+    /// janela (com `alpha` < 1 os dois aparecem sobrepostos). Só em builds `--devtools` com `devEval`.
+    static func skeletonPin(_ url: URL) -> SkeletonPin? {
+        #if VIEWTUBE_DEVTOOLS
+        guard isEnabled, url.scheme == "viewtube", url.host == "devskeleton" else { return nil }
+        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        let value = { (name: String) in items.first { $0.name == name }?.value }
+        let mode: PlayerMode = value("mode") == "music" ? .music : .youtube
+        let shape: LoadingSkeletonView.Shape? = switch value("shape") {
+        case "player": .player
+        case "browse": .browse
+        default: nil
+        }
+        let alpha = value("alpha").flatMap(Double.init).map { min(1, max(0.05, $0)) } ?? 1
+        return SkeletonPin(mode: mode, shape: shape, alpha: alpha, animated: value("anim") == "1")
+        #else
+        return nil
         #endif
     }
 

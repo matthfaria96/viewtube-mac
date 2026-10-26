@@ -43,6 +43,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
+        if didStart, let first = urls.first, let pin = DevTools.skeletonPin(first) {
+            mainWindow.pinSkeleton(pin)
+            return
+        }
         if didStart, let first = urls.first, DevTools.handle(first, webView: player.webPlayer.webView) { return }
         let commands = urls.compactMap(RemoteCommand.parse)
         let request = urls.filter { RemoteCommand.parse($0) == nil }.lazy.compactMap(IncomingLink.parse).last
