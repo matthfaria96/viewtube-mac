@@ -1,0 +1,117 @@
+/* Inglês só da janela de Ajustes (e do Sobre). O resto do app continua em português. */
+
+/* Abas */
+"Geral" = "General";
+"Conta" = "Account";
+"YouTube" = "YouTube";
+"Music" = "Music";
+"Bloqueios" = "Blocking";
+"Navegador" = "Browser";
+"Sobre" = "About";
+
+/* Geral */
+"Ao abrir" = "On launch";
+"Abrir em" = "Open in";
+"O último usado" = "Last used";
+"YouTube Music" = "YouTube Music";
+"Retomar de onde parei" = "Resume where I left off";
+"Volta ao mesmo vídeo ou música, no mesmo ponto." = "Goes back to the same video or song, at the same point.";
+"Janela" = "Window";
+"Barra superior maior" = "Larger toolbar";
+"Botões, seletor e foto de perfil maiores. Desligado, a barra fica compacta." = "Bigger buttons, switch and profile photo. When off, the toolbar is compact.";
+"Reprodução" = "Playback";
+"Continuar tocando ao fechar a janela" = "Keep playing when the window is closed";
+"A música segue tocando com a janela fechada." = "Music keeps playing with the window closed.";
+"Mini player na barra de menus" = "Mini player in the menu bar";
+"Controles e a faixa atual no topo da tela." = "Controls and the current track at the top of the screen.";
+"Qualidade do vídeo" = "Video quality";
+"A mesma nos dois modos, para a imagem não mudar ao trocar." = "The same in both modes, so the picture doesn't change when you switch.";
+"Máxima disponível" = "Highest available";
+"4K (2160p)" = "4K (2160p)";
+"Modo teatro" = "Theater mode";
+"Vídeo na largura toda; a coluna da direita desce para baixo." = "Full-width video; the right column moves below.";
+"Retrato na tela cheia" = "Portrait in full screen";
+"Recorta o vídeo na vertical, com o fundo desfocado." = "Crops the video vertically, over a blurred background.";
+"Interface limpa" = "Clean interface";
+"Esconde o que não é usado nos sites, deixando só o essencial." = "Hides what you don't use on the sites, leaving just the essentials.";
+"YouTube e Music" = "YouTube and Music";
+
+/* YouTube e Music */
+"Velocidade" = "Speed";
+"Normal" = "Normal";
+"Vale para todo vídeo no modo YouTube. Também no botão 1× da barra." = "Applies to every video in YouTube mode. Also on the 1× button in the toolbar.";
+"Qualidade, teatro e retrato valem para os dois modos e ficam em Geral." = "Quality, theater and portrait apply to both modes and live in General.";
+"Vale para toda música no modo Music. Também no botão 1× da barra." = "Applies to every song in Music mode. Also on the 1× button in the toolbar.";
+"Início personalizado" = "Personalized home";
+"Suas mais ouvidas, sucessos dos seus artistas, sugestões e categorias, só músicas." = "Your most played, hits from your artists, suggestions and categories, songs only.";
+"Player" = "Player";
+"Modo Música" = "Song mode";
+"Mostra a capa e toca a versão de áudio. Desligado, mostra o clipe (o seletor 🎧 | ▶︎ do player)." = "Shows the cover and plays the audio version. When off, shows the music video (the player's 🎧 | ▶︎ switch).";
+"Letras sincronizadas" = "Synced lyrics";
+"Letra animada na coluna da direita (no teatro, abaixo de \"A seguir\")." = "Animated lyrics in the right column (in theater, below \"Up next\").";
+"Pular trechos sem música" = "Skip non-music parts";
+"Pula falas e introduções sem música (comunidade SponsorBlock)." = "Skips talking and intros without music (SponsorBlock community).";
+
+/* Bloqueios */
+"Bloquear e pular anúncios" = "Block and skip ads";
+"Pular trechos com o SponsorBlock" = "Skip segments with SponsorBlock";
+"Trechos marcados pela comunidade em sponsor.ajay.app. A consulta envia só um prefixo do código do vídeo." = "Segments marked by the community at sponsor.ajay.app. The lookup only sends a prefix of the video's ID.";
+"Patrocínio" = "Sponsor";
+"Autopromoção" = "Self-promotion";
+"Pedido de inscrição/like" = "Subscribe/like reminder";
+"Introdução" = "Intro";
+"Encerramento" = "Outro";
+"Prévia/recapitulação" = "Preview/recap";
+"Trecho sem música (em clipes)" = "Non-music part (in music videos)";
+"Enrolação" = "Filler";
+
+/* Navegador */
+"Do app para o navegador" = "From the app to the browser";
+"Pausar aqui ao abrir no navegador" = "Pause here when opening in the browser";
+"⇧⌘O abre o vídeo no seu navegador padrão, no mesmo ponto." = "⇧⌘O opens the video in your default browser, at the same point.";
+"Do navegador para o app" = "From the browser to the app";
+"Crie um favorito no seu navegador (Safari, Chrome, Arc, Firefox…) e cole isto no endereço. Clicar nele pausa o vídeo no navegador e continua no ViewTube, no mesmo ponto." = "Create a bookmark in your browser (Safari, Chrome, Arc, Firefox…) and paste this as its address. Clicking it pauses the video in the browser and continues in ViewTube, at the same point.";
+"Copiado!" = "Copied!";
+"Copiar favorito" = "Copy bookmark";
+"Ou cole o link no campo de busca do app (⌘L)." = "Or paste the link into the app's search field (⌘L).";
+
+/* Conta */
+"Sair da Conta…" = "Sign Out…";
+"Sai só deste app. O %@ continua conectado." = "Signs out of this app only. %@ stays signed in.";
+"Sai só deste app." = "Signs out of this app only.";
+"Conectado" = "Signed in";
+"Carregando conta…" = "Loading account…";
+"Gerenciar Conta do Google" = "Manage Google Account";
+"%@, conta atual" = "%@, current account";
+"Usar %@" = "Use %@";
+"Adicionar outra conta…" = "Add another account…";
+"Contas" = "Accounts";
+"Trocar de conta recarrega as páginas e continua a música no mesmo ponto." = "Switching accounts reloads the pages and continues the music at the same point.";
+"Atual" = "Current";
+"Usar" = "Use";
+"Você não está conectado" = "You're not signed in";
+"Entre com a conta que já está aberta no %@, sem digitar senha." = "Sign in with the account already open in %@, without typing a password.";
+"Entre com a sua Conta do Google." = "Sign in with your Google Account.";
+"Entrar com o %@" = "Sign in with %@";
+"Fazer Login" = "Sign In";
+"Idioma" = "Language";
+"Local" = "Location";
+"Modo restrito" = "Restricted Mode";
+"Esconde vídeos que podem ser impróprios." = "Hides videos that may be inappropriate.";
+"O local muda as recomendações e o \"Em alta\". Ao mudar, as páginas recarregam no mesmo ponto." = "The location changes recommendations and \"Trending\". When it changes, the pages reload at the same point.";
+
+/* Sobre */
+"Versão %@ (%@)" = "Version %@ (%@)";
+"O ViewTube junta YouTube e YouTube Music num app leve para o Mac: troque de modo sem perder a música, com o mesmo player, volume e letra sincronizada nos dois. Continue no navegador ou traga o vídeo do navegador para cá, no mesmo ponto. Sem anúncios e sem trechos patrocinados." = "ViewTube brings YouTube and YouTube Music together in a light Mac app: switch modes without losing the song, with the same player, volume and synced lyrics in both. Continue in the browser or bring the video from the browser here, at the same point. No ads and no sponsored segments.";
+"ViewTube é software livre sob a GNU GPL v3.0. Não é afiliado ao Google, ao YouTube nem ao YouTube Music." = "ViewTube is free software under the GNU GPL v3.0. It is not affiliated with Google, YouTube or YouTube Music.";
+"Licenças e créditos" = "Licenses and credits";
+"Verificar Atualizações…" = "Check for Updates…";
+"O ViewTube inclui o Sparkle (MIT) para as atualizações. Estes são os serviços e o código que ele usa e os projetos que o inspiraram." = "ViewTube includes Sparkle (MIT) for updates. These are the services and code it uses and the projects that inspired it.";
+"Atualizações dentro do app (Verificar Atualizações…). Licença MIT, © Andy Matuschak e colaboradores." = "In-app updates (Check for Updates…). MIT license, © Andy Matuschak and contributors.";
+"Trechos marcados pela comunidade. Dados sob licença CC BY-NC-SA 4.0." = "Segments marked by the community. Data under the CC BY-NC-SA 4.0 license.";
+"Letras sincronizadas abertas, mantidas pela comunidade." = "Open synced lyrics, maintained by the community.";
+"Inspiração para os recursos (MIT). Nenhum código incluído." = "Inspiration for the features (MIT). No code included.";
+"Inspiração para o app nativo em Swift (MIT). Nenhum código incluído." = "Inspiration for the native Swift app (MIT). No code included.";
+"YouTube e YouTube Music" = "YouTube and YouTube Music";
+"Conteúdo exibido a partir dos sites oficiais. Marcas do Google LLC." = "Content shown from the official sites. Trademarks of Google LLC.";
+"OK" = "OK";

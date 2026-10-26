@@ -27,6 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // outras sem ativar o app, para a página não ficar oculta (document.hidden). Ver CLAUDE.md.
         if ProcessInfo.processInfo.environment["VIEWTUBE_SHOWCASE"] != nil {
             mainWindow.window?.level = .floating
+            startShowcaseHooks()
         }
         // Links recebidos durante a abertura chegam antes daqui; abrem no lugar da sessão salva.
         player.start(with: launchRequest)
@@ -130,6 +131,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     @objc func showSettings() { presentSettings(tab: .general) }
     @objc func showAbout() { presentSettings(tab: .about) }
     @objc func showAccountSettings() { presentSettings(tab: .account) }
+
+    /// Capturas do site, só com VIEWTUBE_SHOWCASE (ver CLAUDE.md): VIEWTUBE_SHOWCASE_SETTINGS=<aba>
+    /// abre os Ajustes nessa aba (general, account, youtube, music, blocking, browser, about) e
+    /// VIEWTUBE_SHOWCASE_MINIPLAYER=<segundos> abre o mini player da barra de menus depois desse tempo.
+    private func startShowcaseHooks() {
+        let env = ProcessInfo.processInfo.environment
+        let tabs: [String: SettingsWindowController.Tab] = [
+            "general": .general, "account": .account, "youtube": .youtube, "music": .music,
+            "blocking": .blocking, "browser": .browser, "about": .about,
+        ]
+        if let name = env["VIEWTUBE_SHOWCASE_SETTINGS"], let tab = tabs[name.lowercased()] {
+            if settingsWindow == nil { settingsWindow = SettingsWindowController(settings: settings, accounts: accounts, flow: signInFlow) }
+            settingsWindow?.showForShowcase(tab)
+        }
+        DevTools.watchShowcaseInbox { [weak self] url in self?.application(NSApp, open: [url]) }
+        if let delay = env["VIEWTUBE_SHOWCASE_MINIPLAYER"].flatMap(Double.init) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + max(0, delay)) { [weak self] in
+                self?.statusItem?.openForShowcase()
+            }
+        }
+    }
 
     private func presentSettings(tab: SettingsWindowController.Tab) {
         if settingsWindow == nil { settingsWindow = SettingsWindowController(settings: settings, accounts: accounts, flow: signInFlow) }

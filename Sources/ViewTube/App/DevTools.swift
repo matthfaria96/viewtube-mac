@@ -10,6 +10,27 @@ import WebKit
 enum DevTools {
     static var isEnabled: Bool { UserDefaults.standard.bool(forKey: "devEval") }
 
+    /// Capturas do site, só em builds `--devtools` e com VIEWTUBE_SHOWCASE_INBOX=<pasta>: cada arquivo
+    /// `.url` que aparece na pasta é lido (uma URL `viewtube://…`), apagado e tratado como um link
+    /// recebido. Assim uma cópia isolada (sem `CFBundleURLTypes`, para não roubar o `viewtube://` do app
+    /// instalado) recebe comandos sem o Launch Services entregar o link ao app errado.
+    static func watchShowcaseInbox(open: @escaping (URL) -> Void) {
+        #if VIEWTUBE_DEVTOOLS
+        guard isEnabled, let path = ProcessInfo.processInfo.environment["VIEWTUBE_SHOWCASE_INBOX"] else { return }
+        let folder = URL(fileURLWithPath: path, isDirectory: true)
+        Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { _ in
+            let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+            for file in files.filter({ $0.pathExtension == "url" }).sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
+                let text = (try? String(contentsOf: file, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines)
+                try? FileManager.default.removeItem(at: file)
+                if let text, let url = URL(string: text), url.scheme == "viewtube" {
+                    MainActor.assumeIsolated { open(url) }
+                }
+            }
+        }
+        #endif
+    }
+
     static func handle(_ url: URL, webView: WKWebView) -> Bool {
         #if VIEWTUBE_DEVTOOLS
         if url.scheme == "viewtube", url.host == "devsize" {

@@ -16,7 +16,7 @@ struct AccountSettings: View {
                 Section {
                     Button("Sair da Conta…", role: .destructive) { flow.confirmSignOut(in: window) }
                 } footer: {
-                    Text(flow.browserName.map { "Sai só deste app. O \($0) continua conectado." } ?? "Sai só deste app.")
+                    Text(flow.browserName.map { String(localized: "Sai só deste app. O \($0) continua conectado.") } ?? String(localized: "Sai só deste app."))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -33,8 +33,8 @@ struct AccountSettings: View {
             HStack(spacing: 14) {
                 AvatarView(url: accounts.current?.photoURL, size: 56, online: true)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(accounts.current?.name ?? "Conectado").font(.title3.weight(.semibold))
-                    Text(accounts.current?.subtitle ?? "Carregando conta…").foregroundStyle(.secondary)
+                    Text(accounts.current?.name ?? String(localized: "Conectado")).font(.title3.weight(.semibold))
+                    Text(accounts.current?.subtitle ?? String(localized: "Carregando conta…")).foregroundStyle(.secondary)
                     Label("Conectado", systemImage: "circle.fill")
                         .labelStyle(.titleAndIcon)
                         .font(.caption)
@@ -49,7 +49,7 @@ struct AccountSettings: View {
             ForEach(accounts.identities) { identity in
                 Button { accounts.switchTo(identity) } label: { row(identity) }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(identity.selected ? "\(identity.name), conta atual" : "Usar \(identity.name)")
+                    .accessibilityLabel(identity.selected ? String(localized: "\(identity.name), conta atual") : String(localized: "Usar \(identity.name)"))
             }
             Button { flow.addAccount(in: window) } label: {
                 Label("Adicionar outra conta…", systemImage: "person.badge.plus")
@@ -92,11 +92,11 @@ struct AccountSettings: View {
             VStack(spacing: 10) {
                 AvatarView(url: nil, size: 56)
                 Text("Você não está conectado").font(.title3.weight(.semibold))
-                Text(flow.browserName.map { "Entre com a conta que já está aberta no \($0), sem digitar senha." }
-                     ?? "Entre com a sua Conta do Google.")
+                Text(flow.browserName.map { String(localized: "Entre com a conta que já está aberta no \($0), sem digitar senha.") }
+                     ?? String(localized: "Entre com a sua Conta do Google."))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-                Button(flow.browserName.map { "Entrar com o \($0)" } ?? "Fazer Login") { flow.begin(in: window) }
+                Button(flow.browserName.map { String(localized: "Entrar com o \($0)") } ?? String(localized: "Fazer Login")) { flow.begin(in: window) }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
                     .padding(.top, 4)
@@ -156,7 +156,7 @@ enum YouTubeLocales {
     }
 
     private static let countryList: [Entry] = {
-        let names = Locale(identifier: "pt_BR")
+        let names = Locale(identifier: Bundle.main.preferredLocalizations.first ?? "pt_BR")
         return Locale.Region.isoRegions
             .map(\.identifier)
             .filter { $0.count == 2 && $0.allSatisfy(\.isLetter) }

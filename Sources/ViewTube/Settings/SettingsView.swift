@@ -36,13 +36,21 @@ final class SettingsWindowController: NSWindowController {
         NSApp.activate()
     }
 
+    /// Capturas do site (só com VIEWTUBE_SHOWCASE_SETTINGS): mostra a aba flutuando, sem ativar o app.
+    func showForShowcase(_ tab: Tab) {
+        tabs.selectedTabViewItemIndex = tab.rawValue
+        window?.level = .floating
+        window?.orderFrontRegardless()
+    }
+
     private func add(_ view: some View, _ label: String, _ symbol: String) {
         let host = NSHostingController(rootView: view.frame(width: 520).fixedSize(horizontal: false, vertical: true))
         host.sizingOptions = .preferredContentSize
-        host.title = label   // a janela mostra o nome da aba
+        let title = Bundle.main.localizedString(forKey: label, value: label, table: nil)
+        host.title = title   // a janela mostra o nome da aba
         let item = NSTabViewItem(viewController: host)
-        item.label = label
-        item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)
+        item.label = title
+        item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
         tabs.addTabViewItem(item)
     }
 }
@@ -55,7 +63,7 @@ struct GeneralSettings: View {
         Form {
             Section("Ao abrir") {
                 Picker("Abrir em", selection: $settings.startMode) {
-                    ForEach(AppSettings.StartMode.allCases) { Text($0.label).tag($0) }
+                    ForEach(AppSettings.StartMode.allCases) { Text(LocalizedStringKey($0.label)).tag($0) }
                 }
                 SettingToggle("Retomar de onde parei", "Volta ao mesmo vídeo ou música, no mesmo ponto.", $settings.resumeLastSession)
             }
@@ -68,7 +76,7 @@ struct GeneralSettings: View {
             }
             Section {
                 Picker(selection: $settings.videoQuality) {
-                    ForEach(AppSettings.VideoQuality.allCases) { Text($0.label).tag($0) }
+                    ForEach(AppSettings.VideoQuality.allCases) { Text(LocalizedStringKey($0.label)).tag($0) }
                 } label: {
                     Text("Qualidade do vídeo")
                     Text("A mesma nos dois modos, para a imagem não mudar ao trocar.")
@@ -98,8 +106,8 @@ struct SettingToggle: View {
 
     var body: some View {
         Toggle(isOn: $isOn) {
-            Text(title)
-            Text(detail)
+            Text(LocalizedStringKey(title))
+            Text(LocalizedStringKey(detail))
         }
     }
 }
@@ -113,11 +121,11 @@ struct RatePicker: View {
     var body: some View {
         Picker(selection: $rate) {
             ForEach(AppSettings.playbackRates, id: \.self) { value in
-                Text(value == 1 ? "Normal" : String(format: "%g×", value)).tag(value)
+                Text(value == 1 ? String(localized: "Normal") : String(format: "%g×", value)).tag(value)
             }
         } label: {
-            Text(title)
-            Text(detail)
+            Text(LocalizedStringKey(title))
+            Text(LocalizedStringKey(detail))
         }
     }
 }
@@ -134,8 +142,7 @@ struct BrowserSettings: View {
                     .foregroundStyle(.secondary)
             }
             Section("Do navegador para o app") {
-                Text("Crie um favorito no seu navegador (Safari, Chrome, Arc, Firefox…) e cole isto no endereço. "
-                     + "Clicar nele pausa o vídeo no navegador e continua no ViewTube, no mesmo ponto.")
+                Text("Crie um favorito no seu navegador (Safari, Chrome, Arc, Firefox…) e cole isto no endereço. Clicar nele pausa o vídeo no navegador e continua no ViewTube, no mesmo ponto.")
                     .fixedSize(horizontal: false, vertical: true)
                 Text(Bookmarklet.source)
                     .font(.system(.caption, design: .monospaced))
@@ -167,7 +174,7 @@ struct BlockingSettings: View {
             Section {
                 Toggle("Pular trechos com o SponsorBlock", isOn: $settings.sponsorBlock)
                 ForEach(SponsorBlock.categoryNames.sorted(by: { $0.value < $1.value }), id: \.key) { key, name in
-                    Toggle(name, isOn: binding(for: key))
+                    Toggle(LocalizedStringKey(name), isOn: binding(for: key))
                         .disabled(!settings.sponsorBlock)
                         .padding(.leading, 12)
                 }

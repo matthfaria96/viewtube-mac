@@ -37,6 +37,8 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/$NAME"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/"
+# Ajustes em inglês (en.lproj); pt-BR.lproj garante o português para quem usa o sistema em português.
+for lproj in Resources/*.lproj; do ditto "$lproj" "$APP/Contents/Resources/${lproj:t}"; done
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 # Sparkle (atualizações dentro do app) é o único framework dinâmico.
 mkdir -p "$APP/Contents/Frameworks"

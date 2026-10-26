@@ -10,7 +10,7 @@ struct AboutView: View {
         let info = Bundle.main.infoDictionary
         let marketing = info?["CFBundleShortVersionString"] as? String ?? "dev"
         let build = info?["CFBundleVersion"] as? String ?? "0"
-        return "Versão \(marketing) (\(build))"
+        return String(localized: "Versão \(marketing) (\(build))")
     }
 
     var body: some View {
@@ -30,9 +30,7 @@ struct AboutView: View {
                 .textSelection(.enabled)
                 .padding(.top, 4)
 
-            Text("O ViewTube junta YouTube e YouTube Music num app leve para o Mac: troque de modo sem perder a música, "
-                 + "com o mesmo player, volume e letra sincronizada nos dois. Continue no navegador ou traga o vídeo do "
-                 + "navegador para cá, no mesmo ponto. Sem anúncios e sem trechos patrocinados.")
+            Text("O ViewTube junta YouTube e YouTube Music num app leve para o Mac: troque de modo sem perder a música, com o mesmo player, volume e letra sincronizada nos dois. Continue no navegador ou traga o vídeo do navegador para cá, no mesmo ponto. Sem anúncios e sem trechos patrocinados.")
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -110,9 +108,9 @@ private struct CreditsView: View {
                 .padding(.bottom, 16)
             ForEach(credits) { credit in
                 VStack(alignment: .leading, spacing: 3) {
-                    Link(credit.name, destination: URL(string: credit.link)!)
+                    Link(LocalizedStringKey(credit.name), destination: URL(string: credit.link)!)
                         .font(.system(size: 13, weight: .semibold))
-                    Text(credit.detail)
+                    Text(LocalizedStringKey(credit.detail))
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                 }

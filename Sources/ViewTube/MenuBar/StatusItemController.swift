@@ -182,6 +182,15 @@ final class StatusItemController: NSObject {
         monitors = [outside, local].compactMap { $0 }
     }
 
+    /// Capturas do site (só com VIEWTUBE_SHOWCASE_MINIPLAYER): abre o painel sem clique e sem os
+    /// monitores de clique fora, para um clique do usuário em outro app não fechá-lo no meio da captura.
+    func openForShowcase() {
+        guard let button = item.button, !panel.isVisible else { return }
+        open(from: button)
+        monitors.forEach(NSEvent.removeMonitor)
+        monitors = []
+    }
+
     private func close() {
         guard panel.isVisible else { return }
         closedAt = Date()
