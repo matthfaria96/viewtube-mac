@@ -116,15 +116,14 @@ enum PlayerPageScript {
       // Abre o compartilhamento nativo do próprio YouTube Music: menu (⋮) da faixa → "Compartilhar".
       let shareBtn = null;
       const nativeShare = () => {
-        const menu = document.querySelector('ytmusic-player-bar ytmusic-menu-renderer')
-          || document.querySelector('ytmusic-player-page ytmusic-menu-renderer');
-        if (!menu) return;
-        const trigger = menu.querySelector('#button, yt-icon-button#button, button');
+        const trigger = window.__viewtubeMusicBar?.menuButton()
+          || document.querySelector('ytmusic-player-page ytmusic-menu-renderer')?.querySelector('#button, yt-icon-button#button, button');
         if (!trigger) return;
         trigger.click();
         setTimeout(() => {
           const items = [...document.querySelectorAll(
-            'tp-yt-iron-dropdown ytmusic-menu-service-item-renderer, ytmusic-menu-popup-renderer ytmusic-menu-service-item-renderer')];
+            'tp-yt-iron-dropdown :is(ytmusic-menu-service-item-renderer, ytmusic-menu-navigation-item-renderer), '
+            + 'ytmusic-menu-popup-renderer :is(ytmusic-menu-service-item-renderer, ytmusic-menu-navigation-item-renderer)')];
           const share = items.find((i) => /compartilhar|share/i.test(i.textContent || ''));
           if (!share) return;
           (share.querySelector('button, a, ytmusic-menu-service-item-renderer') || share).click();

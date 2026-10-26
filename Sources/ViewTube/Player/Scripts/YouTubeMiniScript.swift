@@ -7,6 +7,8 @@ import Foundation
 ///   o botão rosa (⌄) recolhe.
 /// - Music: a barra do site fica escondida por baixo, menos o botão rosa dela (o Music só abre o
 ///   player com clique real nele; os outros cliques pedem ao app um clique de sistema nesse botão).
+///   A barra nova do teste A/B (`ytmusic-miniplayer`) não tem esse botão: o botão rosa é do app
+///   (`#viewtube-music-toggle`) e alterna pelo adaptador `__viewtubeMusicBar`.
 enum YouTubeMiniScript {
     static let source = #"""
     (() => {
@@ -14,7 +16,6 @@ enum YouTubeMiniScript {
       const isMusic = location.hostname === 'music.youtube.com';
       if (!isMusic && location.hostname !== 'www.youtube.com') return;
       window.__viewtubeYouTubeMini = true;
-      const post = (m) => { try { window.webkit.messageHandlers.viewtube.postMessage(m); } catch (_) {} };
       const NS = 'http://www.w3.org/2000/svg';
       const ICON = {
         play: 'M8 5v14l11-7z',
@@ -56,12 +57,12 @@ enum YouTubeMiniScript {
       };
       const onWatch = () => location.pathname === '/watch' && !document.fullscreenElement && !document.webkitFullscreenElement;
 
-      let bar = null, collapse = null, collapsing = false;
+      let bar = null, collapse = null, collapsing = false, musicToggle = null;
       const q = (sel) => bar.querySelector(sel);
 
       // Volta ao vídeo cheio (botão de expandir do mini player; se não houver, navegação interna).
       const expandVideo = () => {
-        if (isMusic) return post({ type: 'trustedClick', target: 'music-toggle' });
+        if (isMusic) return window.__viewtubeMusicBar?.toggle(true);
         const expand = document.querySelector('ytd-miniplayer .ytp-miniplayer-expand-watch-page-button');
         if (expand) return expand.click();
         let id = null;
@@ -161,9 +162,25 @@ enum YouTubeMiniScript {
         document.body.appendChild(collapse);
       };
 
+      // Barra nova do Music: botão rosa do app no mesmo lugar do botão da barra clássica (⌄ aberto, ⌃ recolhido).
+      const updateMusicToggle = (mini) => {
+        const wiz = !!window.__viewtubeMusicBar?.isWiz();
+        if (!wiz && !musicToggle) return;
+        if (!musicToggle) {
+          musicToggle = h('button', 'viewtube-pink-toggle', [], { id: 'viewtube-music-toggle', type: 'button' });
+          musicToggle.addEventListener('click', (e) => { e.stopPropagation(); window.__viewtubeMusicBar?.toggle(false); });
+          document.body.appendChild(musicToggle);
+        }
+        const open = !!document.querySelector('ytmusic-player-page')?.hasAttribute('player-page-open');
+        musicToggle.hidden = !wiz || !(open || mini);
+        musicToggle.classList.toggle('down', open);
+        musicToggle.title = open ? 'Recolher o player' : 'Abrir o player';
+      };
+
       const update = () => {
         if (!document.body) return;
         const mini = miniActive();
+        if (isMusic) updateMusicToggle(mini);
         if (!isMusic) {
           if (!collapse) buildCollapse();
           collapse.hidden = mini || !onWatch();

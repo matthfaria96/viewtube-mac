@@ -39,8 +39,7 @@ enum MusicHomeScript {
         const meta = navigator.mediaSession?.metadata;
         if (!meta?.title) return null;
         const art = [...(meta.artwork || [])].sort((a, b) => parseInt(b.sizes) - parseInt(a.sizes))[0]?.src || '';
-        const link = document.querySelector('ytmusic-player-bar .byline a[href*="channel/"]');
-        const aid = link?.getAttribute('href')?.match(/channel\/(UC[\w-]+)/)?.[1] || '';
+        const aid = window.__viewtubeMusicBar?.artistId() || '';
         return { t: meta.title, a: meta.artist || '', art, aid };
       };
 

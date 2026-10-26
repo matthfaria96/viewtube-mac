@@ -32,6 +32,35 @@ enum DevTools {
         #endif
     }
 
+    /// Testes de variantes A/B: com `VIEWTUBE_DEV_FLAGS=nome=true,outro=false` no ambiente (só builds
+    /// `--devtools` com `devEval`), força esses `EXPERIMENT_FLAGS` do `ytcfg` antes do site ler.
+    /// Ex.: `music_web_enable_wiz_miniplayer=true` liga a barra nova do Music (`ytmusic-miniplayer`).
+    static var flagOverrideScript: String? {
+        #if VIEWTUBE_DEVTOOLS
+        guard isEnabled, let raw = ProcessInfo.processInfo.environment["VIEWTUBE_DEV_FLAGS"] else { return nil }
+        let pairs = raw.split(separator: ",").compactMap { item -> String? in
+            let parts = item.split(separator: "=", maxSplits: 1).map(String.init)
+            guard parts.count == 2, parts[0].allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" }),
+                  ["true", "false"].contains(parts[1]) || Double(parts[1]) != nil else { return nil }
+            return "\"\(parts[0])\": \(parts[1])"
+        }
+        guard !pairs.isEmpty else { return nil }
+        return """
+        (() => {
+          const over = {\(pairs.joined(separator: ", "))};
+          const patch = () => {
+            const flags = window.ytcfg?.get?.('EXPERIMENT_FLAGS');
+            if (flags) for (const k in over) if (flags[k] !== over[k]) flags[k] = over[k];
+          };
+          new MutationObserver(patch).observe(document, { childList: true, subtree: true });
+          document.addEventListener('DOMContentLoaded', patch);
+        })();
+        """
+        #else
+        return nil
+        #endif
+    }
+
     /// Esqueleto fixo por cima da página (capturas e conferência de layout): `shape` nil = tirar.
     struct SkeletonPin {
         let mode: PlayerMode

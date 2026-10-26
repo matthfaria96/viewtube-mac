@@ -711,6 +711,15 @@ enum StyleScript {
       visibility: visible !important; pointer-events: auto !important;
       position: fixed !important; right: 16px !important; bottom: 10px !important; margin: 0 !important;
     }
+    /* Barra nova do Music (teste A/B, `ytmusic-miniplayer`): some nos dois estados, como a clássica.
+       Ela não tem botão de abrir/recolher; o botão rosa é do app, no mesmo lugar. */
+    html[vt-layout] ytmusic-miniplayer[slot="player-bar"] {
+      visibility: hidden !important; pointer-events: none !important; background: transparent !important;
+    }
+    html[vt-layout] #viewtube-music-toggle.viewtube-pink-toggle {
+      position: fixed !important; right: 16px !important; bottom: 10px !important; margin: 0 !important; z-index: 2103 !important;
+    }
+    html:not([vt-layout]) #viewtube-music-toggle, #viewtube-music-toggle[hidden] { display: none !important; }
     #viewtube-ytbar .vt-ytbar-toggle-space { flex: none; width: 44px; height: 44px; margin-left: auto; }
     #viewtube-ytbar .vt-ytbar-thumb { position: relative; border-radius: 6px; overflow: hidden; }
     #viewtube-ytbar .vt-ytbar-thumb :is(.vt-ytbar-art, .vt-ytbar-live) { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }

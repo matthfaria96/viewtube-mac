@@ -54,23 +54,20 @@ enum PlayerControlsScript {
       window.__viewtubeMatchAV = matchAV;
 
       // ---- Adaptadores: o que muda de um site para o outro ----
-      const musicBar = () => document.querySelector('ytmusic-player-bar');
-      const musicRate = (kind) => {
-        const r = musicBar()?.querySelector('ytmusic-like-button-renderer');
-        return r?.querySelector(`#button-shape-${kind} button`) || r?.querySelectorAll('button')[kind === 'like' ? 0 : 1];
-      };
+      // Barra do Music (clássica ou a nova do teste A/B): sempre pelo adaptador da ponte.
+      const musicBar = () => window.__viewtubeMusicBar;
       const site = isMusic ? {
         mountPoint: () => {
           const open = document.querySelector('ytmusic-player-page')?.hasAttribute('player-page-open');
           return open ? { parent: document.querySelector('ytmusic-player#player'), first: false } : null;
         },
-        rating: () => musicBar()?.querySelector('ytmusic-like-button-renderer')?.getAttribute('like-status'),
-        like: () => musicRate('like')?.click(),
-        dislike: () => musicRate('dislike')?.click(),
+        rating: () => musicBar()?.rating(),
+        like: () => musicBar()?.likeButton('like')?.click(),
+        dislike: () => musicBar()?.likeButton('dislike')?.click(),
         canShuffle: () => true,
-        shuffle: () => musicBar()?.querySelector('.shuffle')?.click(),
-        repeatMode: () => musicBar()?.getAttribute('repeat-mode') || 'NONE',
-        repeat: () => musicBar()?.querySelector('.repeat')?.click(),
+        shuffle: () => musicBar()?.shuffle(),
+        repeatMode: () => musicBar()?.repeatMode() || 'NONE',
+        repeat: () => musicBar()?.repeat(),
         hasCaptions: () => false,
         captionsOn: () => false,
         captions: () => {},

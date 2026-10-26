@@ -108,9 +108,63 @@ enum BridgeScript {
       // O site só troca o atributo no fim da animação (~1 s): o clique já vale como o novo estado.
       let layoutIntent = null, layoutIntentAt = 0;
       const intend = (layout) => { layoutIntent = layout; layoutIntentAt = Date.now(); setTimeout(report, 0); };
+
+      // ---- Barra do Music: a clássica (`ytmusic-player-bar`, Polymer) ou a nova (`ytmusic-miniplayer`,
+      // feita no "wiz"), que o YouTube serve por teste A/B (flag `music_web_enable_wiz_miniplayer`).
+      // Todo script que mexe na barra passa por aqui (`window.__viewtubeMusicBar`).
+      // A nova não tem o botão de abrir/recolher (clicar na barra alterna) e aceita cliques sintéticos.
+      const musicBar = window.__viewtubeMusicBar = (() => {
+        const classic = () => document.querySelector('ytmusic-player-bar');
+        const wiz = () => document.querySelector('ytmusic-miniplayer[slot="player-bar"]') || document.querySelector('ytmusic-miniplayer');
+        const pick = (classicSel, wizSel) => classic()?.querySelector(classicSel) || wiz()?.querySelector(wizSel) || null;
+        const pressed = (el) => el?.getAttribute('aria-pressed') === 'true';
+        // Estado do Music (Redux), igual nas duas barras.
+        const store = () => { try { return document.querySelector('ytmusic-app')?.store?.getState?.() || null; } catch (_) { return null; } };
+        const likeButton = (kind) => {
+          const r = classic()?.querySelector('ytmusic-like-button-renderer');
+          if (r) return r.querySelector(`#button-shape-${kind} button`) || r.querySelectorAll('button')[kind === 'like' ? 0 : 1] || null;
+          return wiz()?.querySelector(`${kind}-button-view-model button`) || null;
+        };
+        return {
+          el: () => classic() || wiz(),
+          isWiz: () => !classic() && !!wiz(),
+          next: () => pick('.next-button', '.ytmusicPlayerControlsNextButton button')?.click(),
+          previous: () => pick('.previous-button', '.ytmusicPlayerControlsPreviousButton button')?.click(),
+          shuffle: () => pick('.shuffle', '.ytmusicPlayerControlsShuffleButton button')?.click(),
+          repeat: () => pick('.repeat', '.ytmusicPlayerControlsRepeatButton button')?.click(),
+          repeatMode: () => store()?.queue?.repeatMode || classic()?.getAttribute('repeat-mode')
+            || (pressed(wiz()?.querySelector('.ytmusicPlayerControlsRepeatButton button')) ? 'ALL' : 'NONE'),
+          likeButton,
+          rating: () => {
+            const r = classic()?.querySelector('ytmusic-like-button-renderer');
+            if (r) return r.getAttribute('like-status');
+            return pressed(likeButton('like')) ? 'LIKE' : pressed(likeButton('dislike')) ? 'DISLIKE' : 'INDIFFERENT';
+          },
+          // Menu (⋮) da faixa tocando.
+          menuButton: () => {
+            const menu = classic()?.querySelector('ytmusic-menu-renderer');
+            return menu?.querySelector('#button, yt-icon-button#button, button') || wiz()?.querySelector('.ytMusicMiniPlayerMenuButton button') || null;
+          },
+          // Canal do artista: link da barra clássica; a nova não tem href, então vem da resposta do player.
+          artistId: () => {
+            const href = classic()?.querySelector('.byline a[href*="channel/"]')?.getAttribute('href') || '';
+            const id = href.match(/channel\/(UC[\w-]+)/)?.[1];
+            if (id) return id;
+            try { return player()?.getPlayerResponse?.()?.videoDetails?.channelId || ''; } catch (_) { return ''; }
+          },
+          // Abre/recolhe a página do player. A clássica só aceita clique real no botão dela (o app gera
+          // um clique de sistema); a nova alterna com um clique comum na barra. `intent`: pedido do usuário.
+          toggle: (intent) => {
+            if (intent) intend(musicOpen() ? 'mini' : 'full');
+            const w = !classic() && wiz();
+            if (w) w.click();
+            else post({ type: 'trustedClick', target: 'music-toggle' });
+          },
+        };
+      })();
       document.addEventListener('click', (e) => {
         if (!e.isTrusted) return;   // só clique do usuário; os nossos (setLayout) não contam como intenção
-        const target = e.target.closest?.('ytmusic-player-bar .toggle-player-page-button, #viewtube-yt-collapse, #viewtube-ytbar .viewtube-pink-toggle');
+        const target = e.target.closest?.('ytmusic-player-bar .toggle-player-page-button, #viewtube-music-toggle, #viewtube-yt-collapse, #viewtube-ytbar .viewtube-pink-toggle');
         if (!target) return;
         if (isMusic) intend(musicOpen() ? 'mini' : 'full');
         else intend(target.id === 'viewtube-yt-collapse' ? 'mini' : 'full');
@@ -122,7 +176,7 @@ enum BridgeScript {
       let openWatch = 0;
       document.addEventListener('click', (e) => {
         if (!e.isTrusted || e.button !== 0) return;
-        if (e.target.closest?.('ytmusic-player-bar, #viewtube-ytbar, ytd-miniplayer, ytmusic-player-page, #viewtube-controls, '
+        if (e.target.closest?.('ytmusic-player-bar, ytmusic-miniplayer, #viewtube-music-toggle, #viewtube-ytbar, ytd-miniplayer, ytmusic-player-page, #viewtube-controls, '
           + '#viewtube-immersive, .html5-video-player, ytmusic-menu-renderer, ytd-menu-renderer, tp-yt-iron-dropdown, '
           + 'ytmusic-like-button-renderer, #viewtube-music-tabs')) return;
         const before = currentId();
@@ -184,8 +238,8 @@ enum BridgeScript {
       }
       function triggerLayout(want) {
         if (isMusic) {
-          // O Music só aceita clique real nesse botão: o app gera um clique de sistema nele.
-          if ((want === 'mini') === musicOpen()) post({ type: 'trustedClick', target: 'music-toggle' });
+          // Barra clássica: só clique real no botão dela (clique de sistema pelo app); nova: clique na barra.
+          if ((want === 'mini') === musicOpen()) musicBar.toggle(false);
         } else if (want === 'mini' && location.pathname === '/watch' && !miniActive()) {
           const button = document.querySelector('.ytp-miniplayer-button');
           if (button) button.click();
@@ -340,6 +394,9 @@ enum BridgeScript {
         if (!(e.target instanceof HTMLMediaElement) || inAd() || Date.now() < ownRateUntil) return;
         // Vídeo novo: o YouTube voltou a 1× sozinho; isso não é escolha do usuário.
         if (currentId() !== rateVideo || Date.now() < rateHoldUntil) { applyRate(true); return; }
+        // A barra nova do Music volta a 1× sozinha (o botão de velocidade dela fica desligado) e o Music
+        // não tem velocidade na interface: lá a velocidade é só a do app.
+        if (isMusic && musicBar.isWiz()) { applyRate(true); return; }
         const rate = Math.min(4, Math.max(0.25, e.target.playbackRate));
         cfg[isMusic ? 'musicRate' : 'videoRate'] = rate;
         post({ type: 'rate', rate, music: isMusic });
@@ -465,13 +522,13 @@ enum BridgeScript {
 
       const click = (selector) => { const b = document.querySelector(selector); if (b) { b.click(); return true; } return false; };
       const next = () => {
-        if (isMusic) return click('ytmusic-player-bar .next-button');
+        if (isMusic) return musicBar.next();
         try { player()?.nextVideo?.(); } catch (_) { click('.ytp-next-button'); }
       };
       const previous = () => {
         const v = media();
         if (v && v.currentTime > 3) { seekTo(0); return; }
-        if (isMusic) return click('ytmusic-player-bar .previous-button');
+        if (isMusic) return musicBar.previous();
         try { player()?.previousVideo?.(); } catch (_) {}
       };
 
