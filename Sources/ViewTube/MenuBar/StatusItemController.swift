@@ -162,8 +162,15 @@ final class StatusItemController: NSObject {
             host.topAnchor.constraint(equalTo: glass.topAnchor), host.bottomAnchor.constraint(equalTo: glass.bottomAnchor),
         ])
         let size = host.fittingSize
-        let anchor = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
-        let screen = (buttonWindow.screen ?? NSScreen.main)?.visibleFrame ?? .zero
+        var anchor = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
+        var screen = (buttonWindow.screen ?? NSScreen.main)?.visibleFrame ?? .zero
+        // Item escondido (barra de menus cheia): o botão fica fora da barra de menus de qualquer tela. O painel abre no canto de
+        // cima à direita da tela principal (acontece no gancho das capturas, que abre sem clique).
+        if !NSScreen.screens.contains(where: { $0.frame.intersects(anchor) && anchor.maxY >= $0.frame.maxY - 60 }),
+           let main = NSScreen.main {
+            screen = main.visibleFrame
+            anchor = NSRect(x: screen.maxX - 120, y: screen.maxY, width: 24, height: 0)
+        }
         // Logo abaixo do item, centralizado nele e dentro da tela.
         let x = min(max(anchor.midX - size.width / 2, screen.minX + 8), screen.maxX - size.width - 8)
         panel.setFrame(NSRect(x: x, y: anchor.minY - size.height - 4, width: size.width, height: size.height), display: true)
