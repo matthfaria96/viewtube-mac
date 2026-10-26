@@ -17,6 +17,7 @@ App macOS (Swift, AppKit + SwiftUI) que embrulha youtube.com e music.youtube.com
 
 ## Regras aprendidas (não regredir)
 
+- **WKWebView no contêiner por máscara, nunca por constraints** (`PlayerContainerView.show`): na tela cheia o WebKit move o WKWebView para a janela dele só com frame + máscara. Com `translatesAutoresizingMaskIntoConstraints = false`, entrar na tela cheia com o vídeo pausado (ou depois disso, qualquer entrada) zerava o WKWebView (0×0, `innerWidth` 0) e a tela cheia ficava preta (1.0.8, também na 1.0.6). Usar `autoresizingMask = [.width, .height]` + `frame = bounds`.
 - **Comandar o player pela API do YouTube** (`seekTo`, `playVideo`, `pauseVideo` do `#movie_player`), não pelo `<video>`: `video.currentTime` logo após carregar trava o buffer a frio.
 - Na abertura a frio o Music não faz autoplay e o vídeo nem carrega (duração 0): `applyPending` dá a partida com `playVideo()` (no mudo quando a sessão retoma pausada).
 - O YouTube ignora cliques sintéticos no botão "Pular". O bloqueio principal é podar `adPlacements`/`playerAds`/`adSlots` (JSON.parse, Response.json, `ytInitialPlayerResponse`) no início do documento. Pular (levar o anúncio ao fim) fica só de reserva.

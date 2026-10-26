@@ -189,14 +189,14 @@ final class PlayerContainerView: NSView {
             layer.add(fade, forKey: "modeSwitch")
         }
         page?.removeFromSuperview()
-        webView.translatesAutoresizingMaskIntoConstraints = false
+        // Tamanho por máscara (autoresizing), NÃO por constraints: na tela cheia o WebKit tira o
+        // WKWebView daqui e o põe na janela dele só com frame + máscara. Com
+        // `translatesAutoresizingMaskIntoConstraints = false` e sem constraints lá, uma passada de
+        // layout (ex.: tela cheia com o vídeo pausado) zerava o WKWebView (0×0) e a tela ficava preta.
+        webView.translatesAutoresizingMaskIntoConstraints = true
+        webView.autoresizingMask = [.width, .height]
+        webView.frame = bounds
         addSubview(webView, positioned: .below, relativeTo: skeleton ?? toast)
-        NSLayoutConstraint.activate([
-            webView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            webView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            webView.topAnchor.constraint(equalTo: topAnchor),
-            webView.bottomAnchor.constraint(equalTo: bottomAnchor),
-        ])
         page = webView
     }
 
