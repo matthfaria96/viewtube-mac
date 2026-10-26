@@ -1,10 +1,10 @@
 import Foundation
 
 /// Retorno ao clicar numa música ou vídeo (pedido: "às vezes clico e não acontece nada, não tem
-/// informativo de nada"). Na hora do clique, o item ganha um contorno rosa pulsando e uma pílula
-/// discreta embaixo diz "Abrindo “título”…" com um indicador girando; quando a faixa troca, vira
-/// "Tocando" e some. Se nada acontecer em 8 s, avisa para tentar de novo. Vale nos dois sites, para
-/// listas, a home do app, "A seguir", busca e feed (álbuns e playlists que só abrem página não contam).
+/// informativo de nada"). Na hora do clique, o item ganha um contorno rosa pulsando e um cartão de
+/// vidro central com "Abrindo “título”…" + um indicador girando + uma barra que desliza (só aparece
+/// se demorar). Quando o vídeo começa a tocar de fato, vira "Tocando" e some. Se nada tocar em 15 s,
+/// avisa para tentar de novo. Vale nos dois sites, para listas, a home do app, "A seguir", busca e feed.
 enum ClickFeedbackScript {
     static let source = script.replacingOccurrences(of: "__VT_CLICK_CSS__", with: StyleScript.jsString(css))
 
@@ -12,6 +12,36 @@ enum ClickFeedbackScript {
     /* Contorno no próprio item (sem pseudo-elemento nem mudar posicionamento), pulsando na cor. */
     [vt-opening] { outline: 2px solid #ff6b9e !important; outline-offset: -2px; border-radius: 10px; animation: vt-opening-pulse 1s ease-in-out infinite; }
     @keyframes vt-opening-pulse { 50% { outline-color: rgba(255, 107, 158, .35); } }
+    /* Cartão de carregamento (centro): spinner + título + barra deslizante. Só aparece se demorar. */
+    #viewtube-loading {
+      position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.97); z-index: 2301;
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+      min-width: 260px; max-width: min(430px, calc(100vw - 48px)); padding: 22px 26px; border-radius: 20px;
+      background: rgba(28, 28, 30, .82); -webkit-backdrop-filter: blur(24px) saturate(1.5); backdrop-filter: blur(24px) saturate(1.5);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .1);
+      opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease;
+    }
+    #viewtube-loading.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    #viewtube-loading .vt-loading-spin {
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, .16); border-top-color: #ff6b9e;
+      animation: vt-loading-spin .8s linear infinite;
+    }
+    @keyframes vt-loading-spin { to { transform: rotate(360deg); } }
+    #viewtube-loading .vt-loading-title {
+      max-width: 100%; text-align: center; font: 600 14px/1.35 -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif; color: #fff;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #viewtube-loading .vt-loading-bar { width: 100%; height: 3px; border-radius: 3px; overflow: hidden; background: rgba(255, 255, 255, .12); }
+    #viewtube-loading .vt-loading-bar::after {
+      content: ''; display: block; height: 100%; width: 42%;
+      background: linear-gradient(90deg, #ff6b9e, #f0213d);
+      animation: vt-loading-slide 1.15s ease-in-out infinite;
+    }
+    @keyframes vt-loading-slide { from { transform: translateX(-130%); } to { transform: translateX(340%); } }
+    @media (prefers-reduced-motion: reduce) {
+      #viewtube-loading .vt-loading-spin, #viewtube-loading .vt-loading-bar::after { animation-duration: 2.2s; }
+    }
     #viewtube-toast {
       position: fixed; left: 50%; bottom: 84px; z-index: 2300; display: flex; align-items: center; gap: 9px;
       max-width: min(420px, calc(100vw - 48px)); padding: 9px 16px 9px 12px; border-radius: 999px;
@@ -47,6 +77,7 @@ enum ClickFeedbackScript {
         try { const d = document.querySelector('#movie_player')?.getVideoData?.(); if (d?.video_id) return d.video_id; } catch (_) {}
         return new URL(location.href).searchParams.get('v');
       };
+      const media = () => document.querySelector('#movie_player video') || document.querySelector('video');
       // Itens que tocam algo ao clicar (os que só abrem uma página, como álbum ou canal, ficam de fora).
       const ITEMS = isMusic
         ? 'ytmusic-responsive-list-item-renderer, ytmusic-two-row-item-renderer, ytmusic-player-queue-item, #viewtube-home .vt-song, #viewtube-home .vt-card'
@@ -62,6 +93,7 @@ enum ClickFeedbackScript {
       const titleOf = (item) => (item.querySelector('.title, .vt-title, #video-title, .song-title, h3, .yt-lockup-metadata-view-model__title')?.textContent || '').trim();
 
       let toast = null, hideTimer = 0, watch = 0, marked = null;
+      let loading = null, loadingTitle = null, loadingTimer = 0;
       const showToast = (kind, text) => {
         if (!toast) {
           toast = document.createElement('div');
@@ -74,15 +106,41 @@ enum ClickFeedbackScript {
         }
         const icon = toast.firstChild;
         const mark = document.createElement('span');
-        mark.className = kind === 'loading' ? 'vt-toast-spin' : kind === 'ok' ? 'vt-toast-ok' : 'vt-toast-warn';
-        mark.textContent = kind === 'ok' ? '✓' : kind === 'warn' ? '!' : '';
+        mark.className = kind === 'ok' ? 'vt-toast-ok' : 'vt-toast-warn';
+        mark.textContent = kind === 'ok' ? '✓' : '!';
         icon.replaceChildren(mark);
         toast.lastChild.textContent = text;
         clearTimeout(hideTimer);
         requestAnimationFrame(() => toast.classList.add('on'));
-        if (kind !== 'loading') hideTimer = setTimeout(() => toast.classList.remove('on'), kind === 'ok' ? 900 : 2400);
+        hideTimer = setTimeout(() => toast.classList.remove('on'), kind === 'ok' ? 900 : 2400);
       };
+      // Cartão central: só aparece depois de 180 ms (abertura rápida não pisca nada).
+      const showLoading = (title) => {
+        if (!loading) {
+          loading = document.createElement('div');
+          loading.id = 'viewtube-loading';
+          loading.setAttribute('role', 'status');
+          const spin = document.createElement('span'); spin.className = 'vt-loading-spin';
+          loadingTitle = document.createElement('span'); loadingTitle.className = 'vt-loading-title';
+          const bar = document.createElement('span'); bar.className = 'vt-loading-bar';
+          loading.append(spin, loadingTitle, bar);
+          document.body.appendChild(loading);
+        }
+        loadingTitle.textContent = title ? `Abrindo “${title}”…` : 'Abrindo…';
+        clearTimeout(loadingTimer);
+        loadingTimer = setTimeout(() => loading.classList.add('on'), 180);
+      };
+      const hideLoading = () => { clearTimeout(loadingTimer); loading?.classList.remove('on'); };
       const unmark = () => { marked?.removeAttribute('vt-opening'); marked = null; };
+      // Pronto quando o vídeo de destino está de fato tocando (não só quando a URL mudou): a página
+      // do vídeo ainda carrega por um instante depois da navegação interna.
+      const ready = (before, target) => {
+        const v = media();
+        if (!v || v.ended) return false;
+        const id = currentId();
+        if (target) return id === target && !v.paused && v.readyState >= 2;
+        return !!id && id !== before && !v.paused;
+      };
 
       document.addEventListener('click', (e) => {
         if (!e.isTrusted || e.button !== 0 || e.target.closest?.(IGNORE)) return;
@@ -97,19 +155,18 @@ enum ClickFeedbackScript {
         unmark();
         marked = item;
         item.setAttribute('vt-opening', '');
-        showToast('loading', title ? `Abrindo “${title}”…` : 'Abrindo…');
+        showLoading(title);
         const started = Date.now();
         clearInterval(watch);
         watch = setInterval(() => {
-          const id = currentId();
-          if (id && id !== before) {
-            clearInterval(watch); unmark();
+          if (ready(before, target)) {
+            clearInterval(watch); unmark(); hideLoading();
             showToast('ok', 'Tocando');
-          } else if (Date.now() - started > 8000) {
-            clearInterval(watch); unmark();
+          } else if (Date.now() - started > 15000) {
+            clearInterval(watch); unmark(); hideLoading();
             showToast('warn', 'Não abriu. Tente de novo.');
           }
-        }, 120);
+        }, 150);
       }, true);
     })();
     """#

@@ -207,6 +207,9 @@ enum YouTubeMiniScript {
         // Shorts e afins seguem com o YouTube.
         if (!link || link.target === '_blank' || !endpoint || !(endpoint.browseEndpoint || endpoint.searchEndpoint)
             || !v || !v.currentSrc) return;
+        // Playlist: deixa o YouTube navegar direto (sem recolher). Recolher deixava a abertura da
+        // playlist lenta e o vídeo novo abria no mini player.
+        if (link.pathname === '/playlist' || /^VL/.test(endpoint?.browseEndpoint?.browseId || '')) return;
         e.preventDefault();
         e.stopImmediatePropagation();
         if (collapsing) return;   // clique duplo durante a transição: um só
@@ -221,6 +224,33 @@ enum YouTubeMiniScript {
         // Navega só depois que o mini player estiver ativo (navegar no meio da transição o cancela).
         window.__viewtube?.afterMiniplayer(() =>
           app()?.dispatchEvent(new CustomEvent('yt-navigate', { bubbles: true, composed: true, detail: { endpoint } })));
+      }, true);
+
+      // Mini ativo: clicar num vídeo (feed, playlist, busca) abre o player cheio direto, sem tocar o
+      // vídeo no mini player primeiro (que deixava a troca lenta e "minimizada"). Expande o mini player
+      // antes de navegar, então o vídeo novo já chega na página cheia.
+      document.addEventListener('click', (e) => {
+        if (isMusic || !e.isTrusted || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        if (!miniActive()) return;
+        if (e.target.closest?.('ytd-miniplayer, #viewtube-ytbar')) return;   // controles do próprio mini player
+        const link = e.target.closest?.('a.yt-simple-endpoint, a[href]');
+        const endpoint = link?.data || link?.closest?.('[class*="endpoint"]')?.data;
+        if (!endpoint?.watchEndpoint) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const go = () => app()?.dispatchEvent(
+          new CustomEvent('yt-navigate', { bubbles: true, composed: true, detail: { endpoint } }));
+        const expand = document.querySelector('ytd-miniplayer .ytp-miniplayer-expand-watch-page-button');
+        if (expand) {
+          expand.click();
+          // Espera o mini player sair (a página do vídeo abre cheia) e navega para o novo vídeo.
+          const started = Date.now();
+          const wait = setInterval(() => {
+            if (!miniActive() || Date.now() - started > 3000) { clearInterval(wait); setTimeout(go, 120); }
+          }, 80);
+        } else {
+          go();
+        }
       }, true);
 
       ['timeupdate', 'play', 'pause'].forEach((name) =>

@@ -10,6 +10,8 @@ struct YouTubeSettings: View {
             Section {
                 RatePicker(title: "Velocidade", detail: "Vale para todo vídeo no modo YouTube. Também no botão 1× da barra.",
                            rate: $settings.videoRate)
+                SettingToggle("Esconder chat em tela cheia", "Em transmissões ao vivo, não abre o chat ao entrar em tela cheia.",
+                              $settings.hideFullscreenChat)
             } header: {
                 Label("YouTube", systemImage: "play.rectangle")
             } footer: {

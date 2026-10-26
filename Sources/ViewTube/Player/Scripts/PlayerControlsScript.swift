@@ -62,7 +62,7 @@ enum PlayerControlsScript {
       const site = isMusic ? {
         mountPoint: () => {
           const open = document.querySelector('ytmusic-player-page')?.hasAttribute('player-page-open');
-          return open ? { parent: document.querySelector('ytmusic-player-page #main-panel'), first: false } : null;
+          return open ? { parent: document.querySelector('ytmusic-player#player'), first: false } : null;
         },
         rating: () => musicBar()?.querySelector('ytmusic-like-button-renderer')?.getAttribute('like-status'),
         like: () => musicRate('like')?.click(),
@@ -93,7 +93,7 @@ enum PlayerControlsScript {
         },
       } : {
         mountPoint: () => location.pathname === '/watch'
-          ? { parent: document.querySelector('ytd-watch-flexy #below'), first: true } : null,
+          ? { parent: document.querySelector('#player-container'), first: false } : null,
         rating: () => pressed('ytd-watch-metadata like-button-view-model button') ? 'LIKE'
           : pressed('ytd-watch-metadata dislike-button-view-model button') ? 'DISLIKE' : 'INDIFFERENT',
         like: () => click('ytd-watch-metadata like-button-view-model button'),
@@ -155,7 +155,7 @@ enum PlayerControlsScript {
       });
 
       const build = () => {
-        card = h('div', '', [
+        card = h('div', 'vt-overlay', [
           h('div', 'vt-meta', [
             h('div', 'vt-titles', [h('div', 'vt-title'), h('div', 'vt-artist')]),
             h('div', 'vt-rate', [
@@ -364,14 +364,16 @@ enum PlayerControlsScript {
         const point = site.mountPoint();
         if (!point?.parent) return;
         if (!card) build();
-        const placed = point.first ? point.parent.firstElementChild === card : card.parentElement === point.parent;
-        if (!placed) point.first ? point.parent.prepend(card) : point.parent.appendChild(card);
+        // O cartão fica sempre aqui (na caixa do player). NÃO entra no #movie_player: um elemento
+        // composto (vidro/transform) dentro dele faz o WebKit pintar o vídeo de preto.
+        const parent = point.parent;
+        if (card.parentElement !== parent) parent.appendChild(card);
         // O site mexe nesse trecho ao trocar de faixa: o observador recoloca o cartão antes de a tela
         // ser desenhada (esperar o intervalo deixava o conteúdo subir e descer).
-        if (point.parent !== mountedIn) {
+        if (parent !== mountedIn) {
           mountObserver.disconnect();
-          mountObserver.observe(point.parent, { childList: true });
-          mountedIn = point.parent;
+          mountObserver.observe(parent, { childList: true });
+          mountedIn = parent;
         }
         update();
       };
@@ -387,6 +389,16 @@ enum PlayerControlsScript {
         if (++mountBudget > 8) return;
         mountFrame = requestAnimationFrame(() => { mountFrame = 0; mount(); });
       });
+
+      // Auto-esconder o cartão: some depois de ~3 s sem mexer o mouse (como os controles do YouTube).
+      let cardIdle = 0;
+      const wakeCard = () => {
+        if (!card) return;
+        card.classList.remove('vt-idle');
+        clearTimeout(cardIdle);
+        cardIdle = setTimeout(() => card?.classList.add('vt-idle'), 3000);
+      };
+      document.addEventListener('mousemove', () => { if (card?.isConnected) wakeCard(); }, true);
 
       ['timeupdate', 'play', 'pause', 'durationchange', 'volumechange'].forEach((name) =>
         document.addEventListener(name, () => { if (card?.isConnected) update(); }, true));

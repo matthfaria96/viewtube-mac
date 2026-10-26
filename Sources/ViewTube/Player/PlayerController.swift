@@ -101,6 +101,14 @@ final class PlayerController: ObservableObject {
             if self.settings.volume != volume { self.settings.volume = volume }
             if self.settings.muted != muted { self.settings.muted = muted }
         }
+        page.onPortraitZoom = { [weak self] value in
+            guard let self, self.mode == mode else { return }
+            if self.settings.portraitZoom != value { self.settings.portraitZoom = value }
+        }
+        page.onShare = { [weak self] in
+            guard let self, self.mode == mode else { return }
+            self.share()
+        }
         page.onCrashed = { [weak self] in
             guard let self, self.mode == mode else { return }
             let ref = self.currentRef()
@@ -261,6 +269,15 @@ final class PlayerController: ObservableObject {
         guard let url = currentRef()?.with(startTime: nil).url(for: mode) ?? webPlayer.currentURL else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(url.absoluteString, forType: .string)
+    }
+
+    /// Compartilhar a faixa atual pela folha de compartilhamento do macOS (botão no Music).
+    func share() {
+        guard let url = currentRef()?.with(startTime: nil).url(for: mode) ?? webPlayer.currentURL else { return }
+        let picker = NSSharingServicePicker(items: [url])
+        let view = webPlayer.webView
+        let rect = NSRect(x: view.bounds.midX - 1, y: view.bounds.midY - 1, width: 2, height: 2)
+        picker.show(relativeTo: rect, of: view, preferredEdge: .maxY)
     }
 
     /// Link, ou texto para buscar no modo atual (sem recarregar a página).

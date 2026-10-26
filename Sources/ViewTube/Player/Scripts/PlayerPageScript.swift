@@ -15,6 +15,7 @@ enum PlayerPageScript {
       const queueList = () => queueBox()?.querySelector('ytmusic-player-queue');
       const tabs = () => [...document.querySelectorAll('ytmusic-player-page tp-yt-paper-tab')];
       const videoId = () => { try { return document.getElementById('movie_player')?.getVideoData?.().video_id; } catch (_) { return null; } };
+      const post = (m) => { try { window.webkit.messageHandlers.viewtube.postMessage(m); } catch (_) {} };
 
       const ensureMore = () => {
         const host = side(), box = queueBox(), list = queueList();
@@ -111,6 +112,50 @@ enum PlayerPageScript {
         if (queueArrows.parentElement !== box) box.appendChild(queueArrows);
       };
 
+      // Botão "Compartilhar" ao lado do "Salvar" (à esquerda), no mesmo estilo de pílula.
+      // Abre o compartilhamento nativo do próprio YouTube Music: menu (⋮) da faixa → "Compartilhar".
+      let shareBtn = null;
+      const nativeShare = () => {
+        const menu = document.querySelector('ytmusic-player-bar ytmusic-menu-renderer')
+          || document.querySelector('ytmusic-player-page ytmusic-menu-renderer');
+        if (!menu) return;
+        const trigger = menu.querySelector('#button, yt-icon-button#button, button');
+        if (!trigger) return;
+        trigger.click();
+        setTimeout(() => {
+          const items = [...document.querySelectorAll(
+            'tp-yt-iron-dropdown ytmusic-menu-service-item-renderer, ytmusic-menu-popup-renderer ytmusic-menu-service-item-renderer')];
+          const share = items.find((i) => /compartilhar|share/i.test(i.textContent || ''));
+          if (!share) return;
+          (share.querySelector('button, a, ytmusic-menu-service-item-renderer') || share).click();
+        }, 200);
+      };
+      const ensureShare = () => {
+        const header = document.querySelector('ytmusic-player-page ytmusic-queue-header-renderer');
+        if (!header) return;
+        if (!shareBtn) {
+          shareBtn = document.createElement('button');
+          shareBtn.id = 'viewtube-share';
+          shareBtn.type = 'button';
+          shareBtn.title = 'Compartilhar';
+          shareBtn.setAttribute('aria-label', 'Compartilhar');
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.setAttribute('viewBox', '0 0 24 24');
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('d', 'M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z');
+          svg.appendChild(path);
+          shareBtn.appendChild(svg);
+          shareBtn.addEventListener('click', (e) => { e.stopPropagation(); nativeShare(); });
+        }
+        const cloud = header.querySelector('ytmusic-chip-cloud-renderer');
+        const firstChip = cloud?.querySelector('ytmusic-chip-cloud-chip-renderer') || null;
+        const parent = firstChip?.parentElement || cloud || header;
+        // Insere antes do primeiro chip ("Salvar") para ficar à esquerda dele.
+        if (shareBtn.parentElement !== parent || (firstChip && shareBtn.nextElementSibling !== firstChip)) {
+          parent.insertBefore(shareBtn, firstChip);
+        }
+      };
+
       // Empilhado (`vt-stacked`): teatro, ou janela abaixo de 1024 px como a quebra do YouTube para
       // uma coluna. A letra desce para as abas, embaixo do player, como no teatro.
       const narrow = matchMedia('(max-width: 1023px)');
@@ -129,6 +174,7 @@ enum PlayerPageScript {
         ensureMore();
         ensureMusicTabs();
         ensureQueueArrows();
+        ensureShare();
         // Faixa nova: Relacionados pode abrir de novo (a grade "A seguir" fica como o usuário deixou).
         const id = videoId();
         if (id && id !== lastVideo) {

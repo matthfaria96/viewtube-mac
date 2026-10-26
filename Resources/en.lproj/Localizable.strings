@@ -32,6 +32,8 @@
 "Vídeo na largura toda; a coluna da direita desce para baixo." = "Full-width video; the right column moves below.";
 "Retrato na tela cheia" = "Portrait in full screen";
 "Recorta o vídeo na vertical, com o fundo desfocado." = "Crops the video vertically, over a blurred background.";
+"Zoom do retrato" = "Portrait zoom";
+"Amplia o vídeo widescreen e recorta as laterais. Também dá para ajustar com o menu de vidro (− +) na tela cheia." = "Zooms the widescreen video and crops the sides. You can also adjust it with the glass menu (− +) in full screen.";
 "Interface limpa" = "Clean interface";
 "Esconde o que não é usado nos sites, deixando só o essencial." = "Hides what you don't use on the sites, leaving just the essentials.";
 "YouTube e Music" = "YouTube and Music";
@@ -40,6 +42,8 @@
 "Velocidade" = "Speed";
 "Normal" = "Normal";
 "Vale para todo vídeo no modo YouTube. Também no botão 1× da barra." = "Applies to every video in YouTube mode. Also on the 1× button in the toolbar.";
+"Esconder chat em tela cheia" = "Hide chat in full screen";
+"Em transmissões ao vivo, não abre o chat ao entrar em tela cheia." = "On live streams, don't open the chat when entering full screen.";
 "Qualidade, teatro e retrato valem para os dois modos e ficam em Geral." = "Quality, theater and portrait apply to both modes and live in General.";
 "Vale para toda música no modo Music. Também no botão 1× da barra." = "Applies to every song in Music mode. Also on the 1× button in the toolbar.";
 "Início personalizado" = "Personalized home";

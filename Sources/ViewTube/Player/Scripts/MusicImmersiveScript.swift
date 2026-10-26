@@ -89,7 +89,8 @@ enum MusicImmersiveScript {
       box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1), 0 18px 50px rgba(0, 0, 0, .4);
       transition: opacity .35s ease, transform .35s ease;
     }
-    #viewtube-immersive.vt-idle .vt-imm-dock { opacity: 0; transform: translateX(-50%) translateY(14px); pointer-events: none; }
+    /* Player fixo na tela imersiva (pedido): fica sempre visível, não some com o mouse parado. */
+    #viewtube-immersive.vt-idle .vt-imm-dock { opacity: 1; transform: translateX(-50%); pointer-events: auto; }
     #viewtube-immersive.vt-idle { cursor: none; }
     #viewtube-immersive .vt-imm-progress { display: flex; align-items: center; gap: 12px; }
     #viewtube-immersive .vt-imm-time { width: 44px; font-size: 12px; color: rgba(255, 255, 255, .7); font-variant-numeric: tabular-nums; }

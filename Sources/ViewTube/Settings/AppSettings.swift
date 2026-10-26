@@ -48,6 +48,11 @@ final class AppSettings: ObservableObject {
     /// Barra superior mais alta (botões e foto maiores). Padrão: compacta.
     @Published var tallToolbar: Bool { didSet { defaults.set(tallToolbar, forKey: Key.tallToolbar) } }
     @Published var portraitFullscreen: Bool { didSet { defaults.set(portraitFullscreen, forKey: Key.portrait) } }
+    /// Zoom do retrato na tela cheia (YouTube): escala sobre o vídeo 16:9 (1 = widescreen inteiro;
+    /// ~3,2 preenche uma tela 9:16 recortando as laterais).
+    @Published var portraitZoom: Double { didSet { defaults.set(portraitZoom, forKey: Key.portraitZoom) } }
+    /// Esconder o chat ao vivo ao entrar em tela cheia (YouTube). Padrão: ligado.
+    @Published var hideFullscreenChat: Bool { didSet { defaults.set(hideFullscreenChat, forKey: Key.hideFullscreenChat) } }
     @Published var syncedLyrics: Bool { didSet { defaults.set(syncedLyrics, forKey: Key.lyrics) } }
     @Published var cleanInterface: Bool { didSet { defaults.set(cleanInterface, forKey: Key.clean) } }
 
@@ -91,7 +96,8 @@ final class AppSettings: ObservableObject {
         defaults.register(defaults: [
             Key.resume: true, Key.blockAds: true, Key.sponsorBlock: true, Key.pauseOnBrowser: true,
             Key.keepPlaying: true, Key.menuBar: true, Key.zoom: 1.0,
-            Key.portrait: false, Key.lyrics: true, Key.clean: true,
+            Key.portrait: false, Key.portraitZoom: 3.2, Key.hideFullscreenChat: true,
+            Key.lyrics: true, Key.clean: true,
             Key.quality: VideoQuality.auto.rawValue, Key.volume: 100, Key.muted: false, Key.musicHome: true,
             Key.sponsorCategories: SponsorBlock.defaultCategories,
         ])
@@ -118,6 +124,8 @@ final class AppSettings: ObservableObject {
         musicHome = defaults.bool(forKey: Key.musicHome)
         tallToolbar = defaults.bool(forKey: Key.tallToolbar)
         portraitFullscreen = defaults.bool(forKey: Key.portrait)
+        portraitZoom = min(4.0, max(1.0, defaults.double(forKey: Key.portraitZoom)))
+        hideFullscreenChat = defaults.bool(forKey: Key.hideFullscreenChat)
         syncedLyrics = defaults.bool(forKey: Key.lyrics)
         cleanInterface = defaults.bool(forKey: Key.clean)
     }
@@ -143,6 +151,8 @@ final class AppSettings: ObservableObject {
         static let musicHome = "musicHome"
         static let tallToolbar = "tallToolbar"
         static let portrait = "portraitFullscreen"
+        static let portraitZoom = "portraitZoom"
+        static let hideFullscreenChat = "hideFullscreenChat"
         static let lyrics = "syncedLyrics"
         static let clean = "cleanInterface"
     }

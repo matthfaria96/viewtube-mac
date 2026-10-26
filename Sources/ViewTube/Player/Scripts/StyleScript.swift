@@ -13,7 +13,7 @@ enum StyleScript {
     })();
     """
 
-    private static let css = [nativeHeader, glassGuide, ads, clean, portrait, playerLayout, playerCard, lyrics, youtubeMini].joined(separator: "\n")
+    private static let css = [nativeHeader, glassGuide, ads, clean, portrait, fullscreenChat, playerLayout, playerCard, lyrics, youtubeMini].joined(separator: "\n")
 
     /// O cabeçalho é do app (busca, conta, ☰ na barra nativa), igual nos dois modos.
     /// O do site fica com altura zero e invisível, mas no lugar: o menu da conta e outros
@@ -103,19 +103,57 @@ enum StyleScript {
     ) { display: none !important; }
     """
 
-    /// Tela cheia em retrato: vídeo recortado no centro e o próprio vídeo desfocado ao fundo.
+    /// Tela cheia: o vídeo widescreen é ampliado no centro para preencher monitores que não são
+    /// widescreen (o zoom recorta as laterais). O fundo é o próprio vídeo desfocado.
     private static let portrait = """
-    html[vt-portrait-on] #movie_player { background: #000 !important; }
+    html[vt-portrait-on] #movie_player { background: #000 !important; overflow: hidden !important; }
     html[vt-portrait-on] #viewtube-ambient {
       position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none;
       filter: blur(48px) saturate(1.6) brightness(.6); transform: scale(1.25);
     }
     html[vt-portrait-on] #movie_player .html5-video-container { position: absolute !important; inset: 0 !important; z-index: 1 !important; }
+    /* O vídeo fica numa caixa 16:9 maior que a tela, centralizada: crescer a caixa é o mesmo que
+       dar zoom no widescreen e cortar as laterais. 1 = widescreen inteiro; ~3,2 preenche uma tela
+       9:16. `object-fit: cover` na caixa 16:9 não corta nada dentro dela (o corte é da tela).
+       Sem `transform` no <video> (o WebKit às vezes pinta preto) e com tamanho mínimo, para nunca
+       zerar (o player pode reportar 100vw = 0 por um instante ao entrar em tela cheia). */
     html[vt-portrait-on] #movie_player video.html5-main-video {
-      width: min(100vw, calc(100vh * 9 / 16)) !important; height: 100vh !important;
-      left: 50% !important; top: 0 !important; transform: translateX(-50%) !important;
-      object-fit: cover !important; box-shadow: 0 0 120px rgba(0, 0, 0, .7);
+      width: max(1px, calc(100vw * var(--vt-portrait-zoom, 3.2))) !important;
+      height: max(1px, calc(100vw * var(--vt-portrait-zoom, 3.2) * 9 / 16)) !important;
+      left: calc(50% - 100vw * var(--vt-portrait-zoom, 3.2) / 2) !important;
+      top: calc(50% - 100vw * var(--vt-portrait-zoom, 3.2) * 9 / 32) !important;
+      transform: none !important;
+      object-fit: cover !important;
     }
+    /* Menu de vidro de zoom (− × +), dentro do #movie_player para aparecer na tela cheia. */
+    #viewtube-portrait-zoom {
+      position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 80;
+      display: none; align-items: center; gap: 4px; padding: 5px 6px; border-radius: 999px;
+      background: rgba(20, 20, 20, .42); color: #fff; font-family: Roboto, Arial, sans-serif;
+      -webkit-backdrop-filter: blur(28px) saturate(1.5); backdrop-filter: blur(28px) saturate(1.5);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1), 0 10px 30px rgba(0, 0, 0, .4);
+      opacity: 0; pointer-events: none; transition: opacity .18s ease;
+    }
+    html[vt-portrait-on] #viewtube-portrait-zoom { display: flex; }
+    /* Só aparece ao mexer o mouse (e some depois de 3 s). Com o vídeo preenchendo tudo, nunca aparece. */
+    #viewtube-portrait-zoom.vt-show { opacity: 1; pointer-events: auto; }
+    #viewtube-portrait-zoom button {
+      width: 34px; height: 34px; border: 0; border-radius: 50%; background: none; color: #fff; cursor: pointer;
+      font-size: 20px; line-height: 1; display: grid; place-items: center; transition: background .15s ease;
+    }
+    #viewtube-portrait-zoom button:hover { background: rgba(255, 255, 255, .12); }
+    #viewtube-portrait-zoom button:active { transform: scale(.9); }
+    #viewtube-portrait-zoom button:disabled { opacity: .35; cursor: default; background: none; transform: none; }
+    #viewtube-portrait-zoom span {
+      min-width: 52px; text-align: center; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums;
+    }
+    @media (prefers-reduced-motion: reduce) { #viewtube-portrait-zoom button { transition: none !important; } }
+    """
+
+    /// Esconde o chat ao vivo em tela cheia (o atributo é posto pelo FullscreenChatScript só quando
+    /// o ajuste está ativo E o player está em tela cheia).
+    private static let fullscreenChat = """
+    html[vt-hide-fullscreen-chat] ytd-live-chat-frame { display: none !important; }
     """
 
     /// Página do player do Music em duas colunas. Esquerda (rola): capa/vídeo em destaque →
@@ -248,6 +286,18 @@ enum StyleScript {
     }
     #viewtube-queue-arrows button:hover { background: rgba(255, 255, 255, .16); }
     #viewtube-queue-arrows svg { width: 20px; height: 20px; fill: currentColor; }
+    /* Botão "Compartilhar" ao lado do "Salvar" (à esquerda), no mesmo estilo de pílula. */
+    #viewtube-share {
+      display: inline-flex; align-items: center; justify-content: center; flex: none;
+      width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; cursor: pointer;
+      background: rgba(255, 255, 255, .08); color: #fff; transition: background .15s ease;
+    }
+    #viewtube-share:hover { background: rgba(255, 255, 255, .16); }
+    #viewtube-share svg { width: 17px; height: 17px; fill: currentColor; }
+    /* Compacto: vai para a esquerda do "Salvar" (que fica em right: 76px com 30 px de largura). */
+    html[vt-layout][vt-stacked] #viewtube-share {
+      position: absolute; top: -1px; right: 112px; width: 30px; height: 30px;
+    }
     html[vt-layout][vt-stacked] ytmusic-player-page ytmusic-queue-header-renderer ytmusic-chip-cloud-chip-renderer a.yt-simple-endpoint {
       width: 30px !important; height: 30px !important; min-width: 0 !important; padding: 0 !important;
       display: grid !important; place-items: center !important; border-radius: 50% !important;
@@ -456,6 +506,41 @@ enum StyleScript {
     /// o mini player, ⌃ abre de novo). Com a página aberta, a barra do rodapé some e só ele fica.
     private static let playerCard = """
     #viewtube-controls { width: 100%; margin: 0; color: #fff; position: relative; z-index: 1; -webkit-font-smoothing: antialiased; }
+    /* Cartão dentro do vídeo: overlay no rodapé, aparece ao passar o mouse e some ao sair
+       (como no YouTube original). A transição é de opacidade/posição, sem recriar nada. */
+    #viewtube-controls.vt-overlay {
+      position: absolute; left: 0; right: 0; bottom: 0; z-index: 60;
+      width: 100% !important; margin: 0 !important;
+      padding: 12px 16px 10px; box-sizing: border-box;
+      background: linear-gradient(to top, rgba(0, 0, 0, .92) 0%, rgba(0, 0, 0, .55) 58%, rgba(0, 0, 0, 0) 100%);
+      opacity: 0; pointer-events: none; transform: translateY(6px);
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    /* A caixa do player é o "containing block" do cartão absoluto (o Music não é posicionado por padrão). */
+    ytmusic-player#player:not([player-ui-state="MINIPLAYER"]) { position: relative !important; }
+    #player-container:hover #viewtube-controls.vt-overlay,
+    #movie_player:hover #viewtube-controls.vt-overlay,
+    :fullscreen:hover #viewtube-controls.vt-overlay,
+    :-webkit-full-screen:hover #viewtube-controls.vt-overlay,
+    ytmusic-player#player:hover #viewtube-controls.vt-overlay {
+      opacity: 1; pointer-events: auto; transform: translateY(0);
+    }
+    /* Cartão some depois de 3 s sem mexer o mouse (ou ao sair do player). */
+    #viewtube-controls.vt-overlay.vt-idle { opacity: 0 !important; pointer-events: none !important; transform: translateY(6px) !important; }
+    /* Em tela cheia o YouTube mostra os controles dele: o nosso cartão sai. */
+    :fullscreen #viewtube-controls.vt-overlay, :-webkit-full-screen #viewtube-controls.vt-overlay,
+    #movie_player.ytp-fullscreen #viewtube-controls.vt-overlay { display: none !important; }
+    /* No topo do player do Music: tela cheia e "abrir o miniplayer" saem (o cartão já tem o seu). */
+    ytmusic-player-page ytmusic-player .fullscreen-button,
+    ytmusic-player-page ytmusic-player .player-minimize-button { display: none !important; }
+    /* Dentro do vídeo o cartão é mais compacto que abaixo dele. */
+    #viewtube-controls.vt-overlay .vt-title { font-size: 16px; line-height: 22px; }
+    #viewtube-controls.vt-overlay .vt-artist { font-size: 12px; }
+    #viewtube-controls.vt-overlay .vt-progress { margin: 8px 0 2px; }
+    #viewtube-controls.vt-overlay .vt-play { width: 48px; height: 48px; }
+    #viewtube-controls.vt-overlay .vt-play svg { width: 24px; height: 24px; }
+    #viewtube-controls.vt-overlay .vt-pill { height: 40px; }
+    #viewtube-controls.vt-overlay .vt-icon { width: 34px; height: 34px; }
     #viewtube-controls .vt-meta { display: flex; align-items: center; gap: 12px; }
     #viewtube-controls .vt-titles { flex: 1; min-width: 0; }
     #viewtube-controls .vt-title {
@@ -518,6 +603,10 @@ enum StyleScript {
     #viewtube-controls .vt-divider { flex: none; width: 1px; height: 20px; margin: 0 2px; background: rgba(255, 255, 255, .14); }
     #viewtube-controls .vt-volume { gap: 6px; padding-right: 14px; }
     #viewtube-controls .vt-volume input[type=range] { flex: 1 1 auto !important; width: auto !important; min-width: 40px; }
+    /* Em janelas muito largas as pílulas laterais não esticam: crescem até uma largura máxima e ficam
+       perto do centro, para os botões não se afastarem demais. O do meio continua no lugar. */
+    #viewtube-controls .vt-left { justify-self: end; width: 100%; max-width: 360px; }
+    #viewtube-controls .vt-volume { justify-self: start; width: 100%; max-width: 260px; }
     #viewtube-controls .vt-buttons { display: flex; align-items: center; gap: 14px; }
     #viewtube-controls button {
       background: none; border: 0; padding: 0; color: #fff; cursor: pointer; display: grid; place-items: center;
@@ -598,8 +687,8 @@ enum StyleScript {
     /* O YouTube ajusta a altura do player ao formato do vídeo (4:3 fica mais alto); aqui a
        moldura é sempre 16:9, como no Music. */
     ytd-watch-flexy { --ytd-watch-flexy-width-ratio: 16 !important; --ytd-watch-flexy-height-ratio: 9 !important; }
-    /* YouTube: o cartão do app fica abaixo do vídeo; os controles sobre o vídeo saem (menos em
-       tela cheia) e título/curtir não se repetem embaixo. */
+    /* YouTube: o cartão do app fica na caixa do player; os controles nativos sobre o vídeo saem
+       fora da tela cheia. Dentro do #movie_player o cartão quebra a composição do vídeo (preto). */
     ytd-watch-flexy #viewtube-controls { margin: 20px 0 18px; }   /* mesmo espaço do Music (gap 20) */
     ytd-watch-flexy:not([fullscreen]) #movie_player:not(.ytp-fullscreen) :is(.ytp-chrome-bottom, .ytp-gradient-bottom) {
       display: none !important;

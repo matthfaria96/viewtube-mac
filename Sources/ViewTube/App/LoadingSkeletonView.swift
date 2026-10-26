@@ -61,8 +61,8 @@ struct LoadingSkeletonView: View {
         let video = videoSize(size)
         let column = VStack(alignment: .leading, spacing: 0) {
             playerStage(video)
-            channelRow.padding(.top, 44)
-            tabs(stacked(size) ? 3 : 2).padding(.top, 36)
+            channelRow.padding(.top, 16)
+            tabs(stacked(size) ? 3 : 2).padding(.top, 20)
             block(12).frame(height: 140).padding(.top, 16)
         }
         .frame(width: video.width)
@@ -99,7 +99,7 @@ struct LoadingSkeletonView: View {
                     Spacer()
                     if isStacked { circle(30); circle(30); circle(30) } else { block(16).frame(width: 86, height: 32) }
                 }
-                .padding(.top, 34)
+                .padding(.top, 16)
                 if isStacked {
                     // "A seguir" em carrossel de cartões 16:9 e a letra nas abas.
                     HStack(alignment: .top, spacing: 12) {
@@ -137,32 +137,48 @@ struct LoadingSkeletonView: View {
         }
     }
 
-    /// Vídeo + cartão de controles (igual nos dois modos): título, avaliação, progresso e as três
-    /// áreas (pílula de opções, anterior/play/próxima, pílula de áudio com a mesma largura).
+    /// Vídeo com o cartão de controles POR CIMA, no rodapé (na UI nova o cartão é um overlay dentro
+    /// do vídeo, que aparece ao passar o mouse). Abaixo vem o conteúdo da página (canal/abas/"A seguir").
     private func playerStage(_ video: CGSize) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+        ZStack(alignment: .bottom) {
             block(12).frame(width: video.width, height: video.height)
-            HStack {
-                VStack(alignment: .leading, spacing: 8) {
-                    line(height: 20).frame(width: min(260, video.width * 0.5)); line(height: 12).frame(width: 150)
+            cardOverlay(width: video.width)
+        }
+        .frame(width: video.width, height: video.height)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    /// O cartão como ele aparece sobre o vídeo: degradê escuro, título/avaliação, progresso e as
+    /// três áreas (pílula de opções, anterior/play/próxima, pílula de áudio).
+    private func cardOverlay(width: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 7) {
+                    line(height: 15).frame(width: min(240, width * 0.5))
+                    line(height: 10).frame(width: 130)
                 }
                 Spacer()
-                block(19).frame(width: 76, height: 38)
+                block(19).frame(width: 70, height: 32)
             }
-            .padding(.top, 20)
-            line(height: 4).padding(.horizontal, 56).padding(.top, 16)
-            HStack(spacing: 18) {
-                block(23).frame(height: 46).frame(maxWidth: .infinity)
-                HStack(spacing: 14) {
-                    circle(28)
-                    Circle().fill(ModeSwitchView.gradient).opacity(0.35).frame(width: 58, height: 58)
-                    circle(28)
+            line(height: 4).padding(.top, 12)
+            HStack(spacing: 12) {
+                block(23).frame(height: 40).frame(maxWidth: .infinity)
+                HStack(spacing: 12) {
+                    circle(24)
+                    Circle().fill(ModeSwitchView.gradient).opacity(0.38).frame(width: 46, height: 46)
+                    circle(24)
                 }
-                block(23).frame(height: 46).frame(maxWidth: .infinity)
+                block(23).frame(height: 40).frame(maxWidth: .infinity)
             }
             .padding(.top, 8)
         }
-        .frame(width: video.width)
+        .padding(.horizontal, 14)
+        .padding(.top, 20)
+        .padding(.bottom, 10)
+        .background(
+            LinearGradient(colors: [.clear, Color.black.opacity(0.5), Color.black.opacity(0.82)],
+                           startPoint: .top, endPoint: .bottom)
+        )
     }
 
     /// Abas no estilo das do YouTube: nomes em linha e um traço sob a primeira.

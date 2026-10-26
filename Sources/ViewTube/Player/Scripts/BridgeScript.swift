@@ -129,7 +129,8 @@ enum BridgeScript {
         const started = Date.now();
         clearInterval(openWatch);
         openWatch = setInterval(() => {
-          if (Date.now() - started > 8000) return clearInterval(openWatch);
+          // Playlist pessoal demora a carregar (o YouTube refaz a fila inteira): janela maior.
+          if (Date.now() - started > 20000) return clearInterval(openWatch);
           const id = currentId();
           if (!id || id === before) return;
           clearInterval(openWatch);
@@ -152,12 +153,13 @@ enum BridgeScript {
       }, 4000);
       // Estado real (atributos do site), sem a intenção do clique.
       const realLayout = () => isMusic ? (musicOpen() ? 'full' : 'mini') : (miniActive() ? 'mini' : (location.pathname === '/watch' ? 'full' : 'none'));
-      let layoutCheck = 0, layoutWant = null;
+      let layoutCheck = 0, layoutWant = null, layoutFellBack = false;
       function setLayout(want) {
         if (want !== 'full' && want !== 'mini') { releaseHold(); return settled(); }
         // Já a caminho do mesmo formato: um segundo clique no meio da animação do Music a desfaria.
         if (layoutCheck && layoutWant === want) return;
         layoutWant = want;
+        layoutFellBack = false;
         layoutIntent = null;
         clearInterval(layoutCheck);
         triggerLayout(want);
@@ -165,10 +167,13 @@ enum BridgeScript {
         // estado real, então a página só reaparece depois da animação de recolher.
         const started = Date.now();
         let lastTry = Date.now();
+        // Abrir o player no YouTube pode esperar mais: o clique num vídeo de playlist/feed carrega
+        // devagar e o mini player às vezes só aceita o expandir depois que o vídeo chega.
+        const timeout = (want === 'full' && !isMusic) ? 10000 : (isMusic ? 5000 : 3200);
         const check = layoutCheck = setInterval(() => {
           const done = realLayout() === want;
           // Music anima por ~1–2,5 s antes de trocar o atributo: um novo clique no meio desfaria o primeiro.
-          if (done || Date.now() - started > (isMusic ? 5000 : 3200)) {
+          if (done || Date.now() - started > timeout) {
             clearInterval(check);
             if (layoutCheck === check) { layoutCheck = 0; layoutWant = null; }
             setTimeout(() => { releaseHold(); settled(); }, 150);
@@ -189,7 +194,17 @@ enum BridgeScript {
             document.dispatchEvent(new KeyboardEvent('keydown', { key: 'i', code: 'KeyI', keyCode: 73, which: 73, bubbles: true }));
           }
         } else if (want === 'full' && miniActive()) {
-          document.querySelector('ytd-miniplayer .ytp-miniplayer-expand-watch-page-button')?.click();
+          const expand = document.querySelector('ytd-miniplayer .ytp-miniplayer-expand-watch-page-button');
+          if (expand) { expand.click(); return; }
+          // Mini player recém-criado/carregando: sem o botão de expandir, navega para a página do
+          // vídeo (pede 'full'), uma vez por pedido para não ficar re-disparando a navegação.
+          if (!layoutFellBack) {
+            layoutFellBack = true;
+            let id = null;
+            try { id = player()?.getVideoData?.().video_id; } catch (_) {}
+            const v = media();
+            if (id) window.__viewtube.navigate('watch', { videoId: id, time: v ? v.currentTime : 0, play: !!v && !v.paused, layout: 'full' });
+          }
         }
       }
 

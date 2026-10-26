@@ -43,6 +43,8 @@ final class WebPlayer: NSObject {
     var onUserRate: ((Double, PlayerMode) -> Void)?
     var onAccount: ((Bool, URL?) -> Void)?
     var onVolume: ((Int, Bool) -> Void)?
+    var onPortraitZoom: ((Double) -> Void)?
+    var onShare: (() -> Void)?
     var onSettled: (() -> Void)?
     var onTheater: ((Bool) -> Void)?
     var onCover: ((Bool) -> Void)?
@@ -246,7 +248,7 @@ final class WebPlayer: NSObject {
     private static func installScripts(in controller: WKUserContentController, config: PageConfig) {
         controller.removeAllUserScripts()
         let start = [config.bootstrapScript, BridgeScript.adPrune]
-        let end = [BridgeScript.source, StyleScript.source, PortraitScript.source, LyricsScript.source, PlayerPageScript.source, PlayerControlsScript.source, YouTubeMiniScript.source, MusicHomeScript.source, AccountScript.source, YouTubeWatchScript.source, MusicImmersiveScript.source, ClickFeedbackScript.source]
+        let end = [BridgeScript.source, StyleScript.source, PortraitScript.source, FullscreenChatScript.source, LyricsScript.source, PlayerPageScript.source, PlayerControlsScript.source, YouTubeMiniScript.source, MusicHomeScript.source, AccountScript.source, YouTubeWatchScript.source, MusicImmersiveScript.source, ClickFeedbackScript.source]
         for source in start {
             controller.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         }
@@ -299,6 +301,14 @@ final class WebPlayer: NSObject {
         } else if let body = message.body as? [String: Any], body["type"] as? String == "volume",
                   let volume = (body["volume"] as? NSNumber)?.intValue {
             onVolume?(min(100, max(0, volume)), body["muted"] as? Bool ?? false)
+        } else if let body = message.body as? [String: Any], body["type"] as? String == "portraitZoom",
+                  let value = (body["value"] as? NSNumber)?.doubleValue, value.isFinite {
+            onPortraitZoom?(min(4.0, max(1.0, value)))
+        } else if let body = message.body as? [String: Any], body["type"] as? String == "share" {
+            onShare?()
+        } else if let body = message.body as? [String: Any], body["type"] as? String == "log",
+                  let text = body["msg"] as? String {
+            playerLog.notice("page: \(text, privacy: .public)")
         } else if let body = message.body as? [String: Any], body["type"] as? String == "account" {
             let avatar = (body["avatar"] as? String).flatMap(URL.init(string:)).flatMap { $0.scheme == "https" ? $0 : nil }
             onAccount?(body["signedIn"] as? Bool ?? false, avatar)

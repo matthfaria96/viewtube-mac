@@ -83,6 +83,20 @@ struct GeneralSettings: View {
                 }
                 SettingToggle("Modo teatro", "Vídeo na largura toda; a coluna da direita desce para baixo.", $settings.theater)
                 SettingToggle("Retrato na tela cheia", "Recorta o vídeo na vertical, com o fundo desfocado.", $settings.portraitFullscreen)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(LocalizedStringKey("Zoom do retrato"))
+                        Spacer()
+                        Text(String(format: "%.1f×", settings.portraitZoom))
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                    Text(LocalizedStringKey("Amplia o vídeo widescreen e recorta as laterais. Também dá para ajustar com o menu de vidro (− +) na tela cheia."))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Slider(value: $settings.portraitZoom, in: 1.0...4.0, step: 0.1)
+                }
+                .disabled(!settings.portraitFullscreen)
                 SettingToggle("Interface limpa", "Esconde o que não é usado nos sites, deixando só o essencial.", $settings.cleanInterface)
             } header: {
                 Text("YouTube e Music")
