@@ -32,7 +32,7 @@ YouTube and YouTube Music in one light, native macOS app.
 - **Ad blocking and [SponsorBlock](https://sponsor.ajay.app).** Ad fields are pruned from the player response, with skipping as a fallback, and promotions are hidden.
 - **No page reloads.** Each mode stays alive in its own page, so switching only swaps the view and carries the track over.
 
-<img src="docs/music-portrait.jpg" alt="YouTube Music in a narrow window with the cover on top and synced lyrics below" width="420">
+<img src="docs/music-portrait.jpg" alt="Immersive full screen in Music mode, with the cover and synced lyrics" width="560">
 
 Native shell in Swift (AppKit + SwiftUI). Content comes from the system WebKit, with no bundled Chromium, so your Google sign-in, playlists and recommendations work as usual.
 

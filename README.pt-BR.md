@@ -32,7 +32,7 @@ O YouTube e o YouTube Music num app só, leve e nativo para o macOS.
 - **Bloqueio de anúncios e [SponsorBlock](https://sponsor.ajay.app).** Os campos de anúncio saem da resposta do player, com o pulo como reserva, e as promoções somem.
 - **Sem recarregar páginas.** Cada modo fica vivo na sua própria página, então trocar só muda a tela e leva a faixa junto.
 
-<img src="docs/music-portrait.jpg" alt="YouTube Music numa janela estreita, com a capa em cima e a letra sincronizada embaixo" width="420">
+<img src="docs/music-portrait.jpg" alt="Tela cheia imersiva do modo Music, com a capa e a letra sincronizada" width="560">
 
 Casca nativa em Swift (AppKit + SwiftUI). O conteúdo vem do WebKit do sistema, sem Chromium embutido, então o login do Google, as playlists e as recomendações funcionam como sempre.
 
