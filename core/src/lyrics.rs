@@ -82,7 +82,7 @@ fn timestamp(tag: &str) -> Option<f64> {
     }
     let minutes: i64 = parts[0].parse().ok()?;
     let seconds = swift_double(parts[1])?;
-    (minutes >= 0 && seconds >= 0.0 && seconds < 60.0).then(|| minutes as f64 * 60.0 + seconds)
+    (minutes >= 0 && (0.0..60.0).contains(&seconds)).then_some(minutes as f64 * 60.0 + seconds)
 }
 
 // MARK: - LRCLIB

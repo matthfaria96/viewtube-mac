@@ -6,7 +6,7 @@ pub const MAXIMUM: f64 = 7.0 * 24.0 * 3600.0;
 
 pub fn parse(raw: &str) -> Option<f64> {
     let value = parse_unchecked(raw)?;
-    (value.is_finite() && value >= 0.0 && value <= MAXIMUM).then_some(value)
+    (value.is_finite() && (0.0..=MAXIMUM).contains(&value)).then_some(value)
 }
 
 fn parse_unchecked(raw: &str) -> Option<f64> {
@@ -26,7 +26,7 @@ fn parse_unchecked(raw: &str) -> Option<f64> {
 
 fn parse_clock(text: &str) -> Option<f64> {
     let parts: Vec<Option<f64>> = text.split(':').map(swift_double).collect();
-    if !(2..=3).contains(&parts.len()) || !parts.iter().all(|p| p.map_or(false, |v| v >= 0.0)) {
+    if !(2..=3).contains(&parts.len()) || !parts.iter().all(|p| p.is_some_and(|v| v >= 0.0)) {
         return None;
     }
     Some(parts.into_iter().flatten().fold(0.0, |acc, v| acc * 60.0 + v))

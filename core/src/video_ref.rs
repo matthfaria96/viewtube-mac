@@ -65,7 +65,7 @@ impl VideoRef {
         }
         if mode == PlayerMode::Youtube {
             if let Some(time) = self.start_time {
-                if time.is_finite() && time >= 1.0 && time <= time_param::MAXIMUM {
+                if time.is_finite() && (1.0..=time_param::MAXIMUM).contains(&time) {
                     url.push_str(&format!("&t={}s", time as i64));
                 }
             }
