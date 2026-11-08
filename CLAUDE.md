@@ -13,8 +13,10 @@ App macOS (Swift, AppKit + SwiftUI) que embrulha youtube.com e music.youtube.com
 - `Sources/ViewTube/Player/` — `WebPlayer` (dono do WKWebView, vive com a janela fechada), `PlayerController` (coordenador), `NowPlayingController`, `SponsorBlockClient`, `LyricsClient`, `ContentBlocker`, `SessionStore`.
 - `web/` — **JS/CSS injetados, compartilhados com o app do Windows** (um arquivo por módulo; ordem em `web/manifest.json`). `__VT_CSS(nome.css)__` num `.js` vira o CSS do arquivo como string (`WebAsset.expand`, igual no Swift e no Rust). As páginas falam com o app só por `window.__viewtubePost(m)`: no Mac `web/host-webkit.js` (→ `webkit.messageHandlers.viewtube`), no Windows `windows/src-tauri/host-tauri.js` (→ IPC do Tauri). Editar aqui vale para os dois apps; `VIEWTUBE_WEB_DIR=<pasta>` faz o app ler da pasta sem recompilar.
 - `Sources/ViewTube/Player/Scripts/` — wrappers finos que leem `web/` (`WebAssets`, empacotado em `Contents/Resources/web` pelo build-app.sh) e `PageConfig` (ajustes → JSON + atributos `vt-*`).
-- `core/` — **núcleo em Rust** com a mesma lógica do `ViewTubeCore` (sem o `SkeletonLayout`); `core/tests/swift_parity.rs` repete os testes do Swift caso a caso. Mudou um, muda o outro.
-- `windows/` — **app do Windows** (Tauri 2): `src-tauri/src/app.rs` (coordenador, equivale a PlayerController + WebPlayer), `platform.rs` (WebView2: bloqueio de rede e clique real via DevTools Protocol), `media.rs` (SMTC), `tray.rs`, `net.rs` (letras, SponsorBlock), `ui/` (barra do app). Roda também no Mac como prévia ("ViewTube Tauri", outro bundle id). Detalhes em `windows/README.md`.
+- `core/` — **núcleo em Rust** com a mesma lógica do `ViewTubeCore`, incluindo `skeleton.rs` (geometria dos esqueletos); `core/tests/swift_parity.rs` e `skeleton_parity.rs` repetem os testes do Swift caso a caso. Mudou um, muda o outro.
+- `windows/` — **app do Windows** (Tauri 2), paridade total com o Mac: `src-tauri/src/app.rs` (coordenador = PlayerController + WebPlayer), `account.rs` (conta do Google: login pelo site, trocar/sair, preferências PREF), `platform.rs` (WebView2: bloqueio de rede e clique real via DevTools Protocol), `media.rs` (SMTC), `tray.rs`, `net.rs` (letras, SponsorBlock), `state.rs` (estado + ajustes), `ui/` (barra do app, menus, faixa "Abrir link copiado"). Atualização pelo updater do Tauri (feature `updater`, padrão). Roda também no Mac como prévia ("ViewTube Tauri", outro bundle id). Detalhes em `windows/README.md`.
+  - Login copiado do navegador fica **de fora de propósito** (exigiria decifrar o cofre de cookies de outro app). O resto da conta é pela sessão do próprio app.
+  - Checar o código específico do Windows no Mac: `cargo check --target x86_64-pc-windows-msvc --no-default-features` (o `--no-default-features` tira o updater, cujo `ring` não cross-compila aqui) com um `llvm-rc` falso no PATH.
 - `Sources/ViewTube/App/` — AppKit puro: `ViewTubeApp` (@main), `AppDelegate`, `MainWindowController` (cabeçalho nativo), `ToolbarMenus` (menus dos ajustes), `ClipboardToast` (pílula "Abrir link copiado"), `MainMenu`, `DevTools`.
 - `Sources/ViewTube/MenuBar/` e `Settings/` — SwiftUI (mini player, Ajustes, Sobre no padrão do MacDash).
 
@@ -211,8 +213,10 @@ App macOS (Swift, AppKit + SwiftUI) que embrulha youtube.com e music.youtube.com
 
 ## Build e testes
 
-- Rust: `cargo test -p viewtube-core -p viewtube-windows` na raiz. Windows: `cd windows && npm ci && npx tauri build` (no Windows; CI em `.github/workflows/windows.yml`). Checar os tipos do código do Windows no Mac: `cargo check --target x86_64-pc-windows-msvc` com um `llvm-rc` falso no PATH (o check não linka).
+- Rust: `cargo test -p viewtube-core -p viewtube-windows` na raiz. Windows: `cd windows && npm ci && npx tauri build` (no Windows; CI em `.github/workflows/windows.yml`).
 - Ao mexer em `web/`, rodar os dois: os scripts valem para os dois apps.
+- **Instaladores**: Mac `scripts/make-dmg.sh` (depois do `build-app.sh`) → `dist/ViewTube-<versão>-mac.dmg`; Windows pelo CI (artefato `ViewTube-Windows`). Os dois workflows (`mac.yml`, `windows.yml`) também rodam sob demanda em Actions. `dist/` não entra no git.
+- **Updater do Windows**: a chave pública está em `windows/src-tauri/tauri.conf.json`; a privada (gerada com `npx tauri signer generate`) **não** fica no repo. Para assinar o feed de updates, pôr `TAURI_SIGNING_PRIVATE_KEY`/`_PASSWORD` nos segredos do GitHub. O feed vai em `plugins.updater.endpoints`.
 - `scripts/build-app.sh [--install]`. Exige `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (o script já define), porque sem ele as macros do SwiftUI não existem.
 - `vtool` grava o SDK real, senão o app abre sem Liquid Glass.
 - Testes: `DEVELOPER_DIR=… swift test`.

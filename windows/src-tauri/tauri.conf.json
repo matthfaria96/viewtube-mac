@@ -32,7 +32,7 @@
       "endpoints": [
         "https://witchmymac.com/appcast/viewtube-windows.json"
       ],
-      "pubkey": "PLACEHOLDER_MINISIGN_PUBLIC_KEY_BASE64",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNDNjlFNzFFRDQzNUY5RDYKUldUVytUWFVIdWRwUEZEYVhYUGFpMDhvb0dLbkE3S01YT1E2L3Rpczd4YnEydVd2bWxiNm1zN1EK",
       "windows": {
         "installMode": "passive"
       }

@@ -1,0 +1,35 @@
+# App do Mac (Swift) e o DMG. Roda a cada push que mexe no app, nos scripts compartilhados ou no
+# build, e sob demanda. O DMG fica nos artefatos da execução (não assinado/notarizado).
+name: Mac
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "Sources/**"
+      - "Tests/**"
+      - "web/**"
+      - "Resources/**"
+      - "Package.swift"
+      - "Package.resolved"
+      - "scripts/**"
+      - ".github/workflows/mac.yml"
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # o build-app.sh usa as tags para a versão
+
+      - name: App e DMG
+        run: |
+          scripts/build-app.sh
+          scripts/make-dmg.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ViewTube-Mac
+          path: dist/*.dmg
+          if-no-files-found: error
