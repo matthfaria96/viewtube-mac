@@ -25,8 +25,8 @@ jobs:
 
       - name: App e DMG
         run: |
-          scripts/build-app.sh
-          scripts/make-dmg.sh
+          zsh scripts/build-app.sh
+          zsh scripts/make-dmg.sh
 
       - uses: actions/upload-artifact@v4
         with:
