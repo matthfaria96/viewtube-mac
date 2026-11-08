@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ViewTube</title>
+  <link rel="stylesheet" href="toolbar.css">
+</head>
+<body>
+  <header id="bar" data-tauri-drag-region>
+    <div class="group">
+      <button class="glass round" id="guide" title="Menu" aria-label="Menu">
+        <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="glass pill">
+        <button class="round flat" id="back" title="Voltar" aria-label="Voltar">
+          <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <button class="round flat" id="forward" title="Avançar" aria-label="Avançar">
+          <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="glass switch" id="switch" role="tablist" aria-label="Modo">
+      <span class="slider" aria-hidden="true"></span>
+      <button role="tab" data-mode="youtube" id="mode-youtube">YouTube</button>
+      <button role="tab" data-mode="music" id="mode-music">Music</button>
+    </div>
+
+    <div class="group end">
+      <button class="glass round" id="search" title="Buscar (Ctrl+L)" aria-label="Buscar">
+        <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>
+      </button>
+      <button class="glass round rate" id="rate" title="Velocidade" aria-label="Velocidade">1×</button>
+      <button class="glass round" id="settings" title="Ajustes" aria-label="Ajustes">
+        <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+      </button>
+      <button class="glass round account" id="account" title="Conta" aria-label="Conta">
+        <svg viewBox="0 0 24 24" class="person"><circle cx="12" cy="9" r="3.5"/><path d="M5 19c1.5-3.2 4-4.6 7-4.6s5.5 1.4 7 4.6"/></svg>
+        <img id="avatar" alt="" hidden>
+        <span class="online" hidden></span>
+      </button>
+    </div>
+
+    <form id="search-box" class="glass" hidden>
+      <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg>
+      <input id="query" type="search" autocomplete="off" spellcheck="false" placeholder="Buscar ou colar um link do YouTube">
+      <button type="button" class="round flat" id="search-close" aria-label="Fechar a busca">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </form>
+
+    <div id="progress" aria-hidden="true"></div>
+  </header>
+  <script src="toolbar.js"></script>
+</body>
+</html>

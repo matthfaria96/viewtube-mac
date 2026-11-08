@@ -1,0 +1,8 @@
+{
+  "productName": "ViewTube Tauri",
+  "identifier": "com.witchmymac.viewtube.tauri-preview",
+  "bundle": {
+    "targets": ["app"],
+    "macOS": { "minimumSystemVersion": "14.0" }
+  }
+}

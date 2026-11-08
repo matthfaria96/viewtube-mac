@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "pages",
+  "description": "Páginas do YouTube e do Music: só mandam mensagens da ponte (o mesmo que webkit.messageHandlers no Mac).",
+  "webviews": ["youtube", "music"],
+  "remote": { "urls": ["https://www.youtube.com", "https://music.youtube.com"] },
+  "permissions": ["allow-page-message"]
+}

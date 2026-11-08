@@ -25,7 +25,7 @@
   const player = () => document.getElementById('movie_player');
   const media = () => document.querySelector('#movie_player video') || document.querySelector('video');
   const command = (name, arg) => window.__viewtube?.command(name, arg);
-  const post = (m) => { try { window.webkit.messageHandlers.viewtube.postMessage(m); } catch (_) {} };
+  const post = (m) => { try { window.__viewtubePost(m); } catch (_) {} };
   const fmt = (s) => {
     if (!isFinite(s) || s < 0) s = 0;
     const t = Math.floor(s), h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, sec = String(t % 60).padStart(2, '0');

@@ -11,7 +11,10 @@ App macOS (Swift, AppKit + SwiftUI) que embrulha youtube.com e music.youtube.com
 
 - `Sources/ViewTubeCore/` — lógica pura e testada: `VideoRef` (parse/links por modo), `PlayerMode`, `IncomingLink` (`viewtube://`), `RemoteCommand`, `NavigationPolicy`, `SponsorBlock`, `TimeParam`, `Bookmarklet`.
 - `Sources/ViewTube/Player/` — `WebPlayer` (dono do WKWebView, vive com a janela fechada), `PlayerController` (coordenador), `NowPlayingController`, `SponsorBlockClient`, `LyricsClient`, `ContentBlocker`, `SessionStore`.
-- `Sources/ViewTube/Player/Scripts/` — JS/CSS injetados, um módulo por arquivo: `PageConfig` (ajustes → JSON + atributos `vt-*` no `<html>`), `BridgeScript` (estado, comandos, velocidade, anúncios), `StyleScript` (cabeçalho do site escondido, menu de vidro, limpeza, retrato, brilho, letras), `PortraitScript`, `LyricsScript`, `AmbientScript` (brilho atrás do player do Music).
+- `web/` — **JS/CSS injetados, compartilhados com o app do Windows** (um arquivo por módulo; ordem em `web/manifest.json`). `__VT_CSS(nome.css)__` num `.js` vira o CSS do arquivo como string (`WebAsset.expand`, igual no Swift e no Rust). As páginas falam com o app só por `window.__viewtubePost(m)`: no Mac `web/host-webkit.js` (→ `webkit.messageHandlers.viewtube`), no Windows `windows/src-tauri/host-tauri.js` (→ IPC do Tauri). Editar aqui vale para os dois apps; `VIEWTUBE_WEB_DIR=<pasta>` faz o app ler da pasta sem recompilar.
+- `Sources/ViewTube/Player/Scripts/` — wrappers finos que leem `web/` (`WebAssets`, empacotado em `Contents/Resources/web` pelo build-app.sh) e `PageConfig` (ajustes → JSON + atributos `vt-*`).
+- `core/` — **núcleo em Rust** com a mesma lógica do `ViewTubeCore` (sem o `SkeletonLayout`); `core/tests/swift_parity.rs` repete os testes do Swift caso a caso. Mudou um, muda o outro.
+- `windows/` — **app do Windows** (Tauri 2): `src-tauri/src/app.rs` (coordenador, equivale a PlayerController + WebPlayer), `platform.rs` (WebView2: bloqueio de rede e clique real via DevTools Protocol), `media.rs` (SMTC), `tray.rs`, `net.rs` (letras, SponsorBlock), `ui/` (barra do app). Roda também no Mac como prévia ("ViewTube Tauri", outro bundle id). Detalhes em `windows/README.md`.
 - `Sources/ViewTube/App/` — AppKit puro: `ViewTubeApp` (@main), `AppDelegate`, `MainWindowController` (cabeçalho nativo), `ToolbarMenus` (menus dos ajustes), `ClipboardToast` (pílula "Abrir link copiado"), `MainMenu`, `DevTools`.
 - `Sources/ViewTube/MenuBar/` e `Settings/` — SwiftUI (mini player, Ajustes, Sobre no padrão do MacDash).
 
@@ -208,6 +211,8 @@ App macOS (Swift, AppKit + SwiftUI) que embrulha youtube.com e music.youtube.com
 
 ## Build e testes
 
+- Rust: `cargo test -p viewtube-core -p viewtube-windows` na raiz. Windows: `cd windows && npm ci && npx tauri build` (no Windows; CI em `.github/workflows/windows.yml`). Checar os tipos do código do Windows no Mac: `cargo check --target x86_64-pc-windows-msvc` com um `llvm-rc` falso no PATH (o check não linka).
+- Ao mexer em `web/`, rodar os dois: os scripts valem para os dois apps.
 - `scripts/build-app.sh [--install]`. Exige `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (o script já define), porque sem ele as macros do SwiftUI não existem.
 - `vtool` grava o SDK real, senão o app abre sem Liquid Glass.
 - Testes: `DEVELOPER_DIR=… swift test`.

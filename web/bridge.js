@@ -3,7 +3,7 @@
   // Configuração viva: o Swift atualiza o mesmo objeto (PageConfig) sem recarregar.
   const cfg = window.__viewtubeConfig = Object.assign({ blockAds: true, sponsorBlock: true, videoRate: 1, musicRate: 1 }, window.__viewtubeConfig || {});
   const isMusic = location.hostname === 'music.youtube.com';
-  const post = (m) => { try { window.webkit.messageHandlers.viewtube.postMessage(m); } catch (_) {} };
+  const post = (m) => { try { window.__viewtubePost(m); } catch (_) {} };
   const player = () => document.getElementById('movie_player');
   const media = () => document.querySelector('#movie_player video') || document.querySelector('video');
   const inAd = () => !!player()?.classList.contains('ad-showing');

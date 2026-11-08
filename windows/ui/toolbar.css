@@ -1,0 +1,220 @@
+/* Barra do app, no desenho da barra do Mac: cada controle numa cápsula de vidro, o seletor de
+   modo no centro com a pílula em degradê rosa → vermelho, a busca cobrindo a barra inteira. */
+:root {
+  --bg: #0f0f0f;
+  --glass: rgba(255, 255, 255, 0.07);
+  --glass-hover: rgba(255, 255, 255, 0.12);
+  --glass-line: rgba(255, 255, 255, 0.09);
+  --ink: #f1f1f1;
+  --ink-soft: rgba(241, 241, 241, 0.72);
+  --pink: #ff4f8b;
+  --red: #ff1f3d;
+  --side: 34px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font: 500 13px/1 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+#bar {
+  position: relative;
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  background: linear-gradient(to bottom, #161616, var(--bg));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+html.mac #bar { padding-left: 84px; }
+
+.group { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.group.end { justify-content: flex-end; }
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+}
+button:focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
+
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
+  backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.round {
+  width: var(--side);
+  height: var(--side);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: none;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+.round:hover { background-color: var(--glass-hover); }
+.round:active { transform: scale(0.94); }
+.round.flat { border: 0; box-shadow: none; background: none; }
+.round.flat:hover { background: var(--glass-hover); }
+
+svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pill {
+  display: flex;
+  border-radius: 999px;
+  height: var(--side);
+  align-items: center;
+  padding: 0 1px;
+}
+.pill .round { width: 32px; height: 32px; }
+
+/* Seletor YouTube | Music: a pílula desliza para o lado escolhido. */
+.switch {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: var(--side);
+  padding: 3px;
+  border-radius: 999px;
+}
+.switch button {
+  position: relative;
+  z-index: 1;
+  padding: 0 18px;
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: color 0.2s ease;
+}
+.switch button:hover { color: var(--ink); }
+.switch button[aria-selected="true"] { color: #fff; }
+.switch .slider {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--pink), var(--red));
+  box-shadow: 0 2px 10px rgba(255, 31, 61, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: transform 0.28s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.switch[data-mode="music"] .slider { transform: translateX(100%); }
+
+.rate {
+  width: auto;
+  min-width: var(--side);
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.account { position: relative; overflow: visible; }
+.account img {
+  width: calc(var(--side) - 6px);
+  height: calc(var(--side) - 6px);
+  border-radius: 50%;
+  object-fit: cover;
+}
+.account .online {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #30d158;
+  border: 2px solid var(--bg);
+}
+
+/* Busca: cresce a partir da lupa até cobrir a barra; os botões esmaecem por baixo. */
+#search-box {
+  position: absolute;
+  inset: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px 0 14px;
+  border-radius: 999px;
+  background: rgba(30, 30, 30, 0.96);
+  transform-origin: right center;
+  animation: grow 0.22s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+#search-box[hidden] { display: none; }
+#search-box > svg { color: var(--ink-soft); flex: none; }
+#search-box input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+#search-box input::placeholder { color: rgba(241, 241, 241, 0.45); }
+#search-box input::-webkit-search-cancel-button { display: none; }
+#bar.searching > :not(#search-box):not(#progress) { opacity: 0.15; pointer-events: none; transition: opacity 0.2s ease; }
+
+@keyframes grow {
+  from { transform: scaleX(0.08); opacity: 0.4; }
+  to { transform: scaleX(1); opacity: 1; }
+}
+
+/* Linha de progresso da navegação interna (o yt-page-navigation-progress dos sites). */
+#progress {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  height: 3px;
+  width: 100%;
+  transform-origin: left center;
+  transform: scaleX(0);
+  background: linear-gradient(90deg, var(--pink), var(--red));
+  opacity: 0;
+  transition: transform 0.25s ease, opacity 0.3s ease;
+  pointer-events: none;
+}
+
+/* Janela estreita: o seletor encolhe e a velocidade sai (fica no menu de ajustes do site). */
+@media (max-width: 640px) {
+  .switch button { padding: 0 12px; }
+  .rate { display: none; }
+}
+@media (max-width: 480px) {
+  #forward, #settings { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

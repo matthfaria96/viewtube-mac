@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-toolbar-action"
+description = "Enables the toolbar_action command without any pre-configured scope."
+commands.allow = ["toolbar_action"]
+
+[[permission]]
+identifier = "deny-toolbar-action"
+description = "Denies the toolbar_action command without any pre-configured scope."
+commands.deny = ["toolbar_action"]

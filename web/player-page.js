@@ -8,7 +8,7 @@
   const queueList = () => queueBox()?.querySelector('ytmusic-player-queue');
   const tabs = () => [...document.querySelectorAll('ytmusic-player-page tp-yt-paper-tab')];
   const videoId = () => { try { return document.getElementById('movie_player')?.getVideoData?.().video_id; } catch (_) { return null; } };
-  const post = (m) => { try { window.webkit.messageHandlers.viewtube.postMessage(m); } catch (_) {} };
+  const post = (m) => { try { window.__viewtubePost(m); } catch (_) {} };
 
   const ensureMore = () => {
     const host = side(), box = queueBox(), list = queueList();

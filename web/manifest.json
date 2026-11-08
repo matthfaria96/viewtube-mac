@@ -1,5 +1,5 @@
 {
-  "_comment": "Ordem de injeção, igual nos dois apps. __VT_CSS(nome.css)__ vira o conteúdo do arquivo como string JS.",
+  "_comment": "Ordem de injeção, igual nos dois apps. __VT_CSS(nome.css)__ vira o conteúdo do arquivo como string JS. Antes de tudo, cada app injeta a sua ponte window.__viewtubePost (Mac: host-webkit.js; Windows: windows/src-tauri/host-tauri.js) e o bootstrap (config + pageFlags).",
   "documentStart": [
     "ad-prune.js"
   ],

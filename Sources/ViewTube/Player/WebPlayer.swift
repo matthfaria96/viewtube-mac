@@ -247,7 +247,8 @@ final class WebPlayer: NSObject {
     /// A configuração entra antes dos módulos, então a próxima página já nasce com os ajustes atuais.
     private static func installScripts(in controller: WKUserContentController, config: PageConfig) {
         controller.removeAllUserScripts()
-        let start = [config.bootstrapScript, BridgeScript.adPrune] + [DevTools.flagOverrideScript].compactMap { $0 }
+        // A ponte de mensagens (`__viewtubePost`) entra antes de tudo: os módulos a usam para falar com o app.
+        let start = [BridgeScript.host, config.bootstrapScript, BridgeScript.adPrune] + [DevTools.flagOverrideScript].compactMap { $0 }
         let end = [BridgeScript.source, StyleScript.source, PortraitScript.source, FullscreenChatScript.source, LyricsScript.source, PlayerPageScript.source, PlayerControlsScript.source, YouTubeMiniScript.source, MusicHomeScript.source, AccountScript.source, YouTubeWatchScript.source, MusicImmersiveScript.source, ClickFeedbackScript.source]
         for source in start {
             controller.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true))

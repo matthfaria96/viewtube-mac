@@ -51,7 +51,7 @@
     // Guarda o valor desejado (1–4). O efetivo é limitado ao preenchimento pelo applyZoom.
     z = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z / ZOOM_STEP) * ZOOM_STEP));
     if (window.__viewtubeConfig) window.__viewtubeConfig.portraitZoom = z;
-    try { window.webkit.messageHandlers.viewtube.postMessage({ type: 'portraitZoom', value: z }); } catch (_) {}
+    try { window.__viewtubePost({ type: 'portraitZoom', value: z }); } catch (_) {}
     applyZoom(z);
     showPill();
   };
@@ -106,7 +106,7 @@
           const cr = cont ? cont.getBoundingClientRect() : null;
           const rect = r ? [Math.round(r.x), Math.round(r.y), Math.round(r.width), Math.round(r.height)].join(',') : '-';
           const zoom = getComputedStyle(document.documentElement).getPropertyValue('--vt-portrait-zoom');
-          window.webkit.messageHandlers.viewtube.postMessage({ type: 'log',
+          window.__viewtubePost({ type: 'log',
             msg: `portrait on video=${v?.videoWidth}x${v?.videoHeight} rect=${rect} w=${cs?.width} h=${cs?.height} of=${cs?.objectFit} disp=${cs?.display} iw=${window.innerWidth} ih=${window.innerHeight} cont=${cr ? Math.round(cr.width) + 'x' + Math.round(cr.height) : '-'} zoom=${zoom} fill=${fillScale().toFixed(2)}` });
         } catch (_) {}
       }
