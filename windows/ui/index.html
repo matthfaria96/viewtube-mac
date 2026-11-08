@@ -53,6 +53,20 @@
 
     <div id="progress" aria-hidden="true"></div>
   </header>
+
+  <!-- Faixa "Abrir link copiado" (desce abaixo da barra ao voltar com um link do YouTube copiado). -->
+  <div id="offer" hidden>
+    <button id="offer-open">
+      <svg viewBox="0 0 24 24"><path d="M9 12h11M15 8l5 4-5 4"/><path d="M12 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6"/></svg>
+      <span class="offer-text">
+        <b>Abrir link copiado</b>
+        <small id="offer-label"></small>
+      </span>
+    </button>
+    <button id="offer-close" class="round flat" aria-label="Dispensar">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
   <script src="toolbar.js"></script>
 </body>
 </html>

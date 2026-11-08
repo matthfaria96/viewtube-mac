@@ -26,9 +26,12 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+body { display: flex; flex-direction: column; }
+
 #bar {
   position: relative;
-  height: 100%;
+  height: 52px;
+  flex: none;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
@@ -204,6 +207,47 @@ svg {
   opacity: 0;
   transition: transform 0.25s ease, opacity 0.3s ease;
   pointer-events: none;
+}
+
+/* Barra maior (ajuste "Barra superior maior"). */
+html.tall { --side: 40px; }
+html.tall #bar { gap: 14px; }
+
+/* Faixa "Abrir link copiado": aparece abaixo da barra (o app desce a página junto). */
+#offer {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: linear-gradient(to bottom, #161616, var(--bg));
+  animation: drop 0.28s cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+#offer[hidden] { display: none; }
+#offer-open {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--glass);
+  border: 1px solid var(--glass-line);
+  text-align: left;
+  transition: background-color 0.15s ease;
+}
+#offer-open:hover { background: var(--glass-hover); }
+#offer-open > svg { color: var(--pink); flex: none; }
+.offer-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.offer-text b { font-size: 13px; font-weight: 650; }
+.offer-text small { font-size: 11px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@keyframes drop {
+  from { transform: translateY(-8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 /* Janela estreita: o seletor encolhe e a velocidade sai (fica no menu de ajustes do site). */

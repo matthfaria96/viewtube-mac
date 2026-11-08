@@ -60,7 +60,16 @@ struct App {
     last_saved: Instant,
     signed_in: bool,
     avatar: Option<String>,
+    /// Conta e preferências lidas da página (crate::account). O avatar acima vem rápido do estado;
+    /// este é o detalhe completo para os menus de conta e de idioma/local.
+    account: crate::account::AccountState,
+    /// Troca de conta em andamento (não dispara leituras concorrentes).
+    account_busy: bool,
     progress: f64,
+    /// Última área de transferência já avaliada (não oferece a mesma de novo nem a que o app copiou).
+    last_clipboard: Option<String>,
+    /// Oferta "Abrir link copiado" aparecendo: a barra cresce e a página desce enquanto isso.
+    offer_showing: bool,
 }
 
 fn label(mode: PlayerMode) -> &'static str {
@@ -81,7 +90,11 @@ pub fn setup(app: &AppHandle, web_dir: PathBuf, settings_path: PathBuf) -> Resul
     let scripts = PageScripts::load(&web_dir)?;
     let settings = Settings::load(&settings_path);
     let ad_blocking = Arc::new(AtomicBool::new(settings.page.block_ads));
-    let active = settings.last_mode;
+    let active = match settings.start_mode.as_str() {
+        "youtube" => PlayerMode::Youtube,
+        "music" => PlayerMode::Music,
+        _ => settings.last_mode,
+    };
     let session = settings.session.clone().filter(|_| settings.resume_last_session);
     app.manage(Shared {
         inner: Mutex::new(App {
@@ -96,7 +109,11 @@ pub fn setup(app: &AppHandle, web_dir: PathBuf, settings_path: PathBuf) -> Resul
             last_saved: Instant::now(),
             signed_in: false,
             avatar: None,
+            account: crate::account::AccountState::default(),
+            account_busy: false,
             progress: 0.0,
+            last_clipboard: None,
+            offer_showing: false,
         }),
         scripts,
         host_script: include_str!("../host-tauri.js"),
@@ -157,19 +174,47 @@ pub fn setup(app: &AppHandle, web_dir: PathBuf, settings_path: PathBuf) -> Resul
     let handle = app.clone();
     window.on_window_event(move |event| match event {
         tauri::WindowEvent::Resized(_) | tauri::WindowEvent::ScaleFactorChanged { .. } => layout(&handle),
-        // Fechar a janela não para a música (como no Mac): o app segue na bandeja.
+        // Voltou para o app: oferece abrir um link do YouTube que esteja na área de transferência.
+        tauri::WindowEvent::Focused(true) => check_clipboard(&handle),
+        // Fechar a janela: com "Continuar tocando ao fechar a janela" ligado, o app segue na bandeja;
+        // senão, sai de vez (como o Mac, onde o ajuste decide).
         tauri::WindowEvent::CloseRequested { api, .. } => {
-            api.prevent_close();
             save_session(&handle, true);
-            if let Some(w) = handle.get_window(WINDOW) {
-                let _ = w.hide();
+            let keep = shared(&handle).inner.lock().unwrap().settings.keep_playing_when_closed;
+            if keep {
+                api.prevent_close();
+                if let Some(w) = handle.get_window(WINDOW) {
+                    let _ = w.hide();
+                }
+            } else {
+                quit(&handle);
             }
         }
         _ => {}
     });
     crate::media::install(app, &window);
     crate::tray::install(app)?;
+    // Aplica os ajustes de janela guardados.
+    let (zoom, on_top, mini) = {
+        let shared = shared(app);
+        let inner = shared.inner.lock().unwrap();
+        (inner.settings.page_zoom, inner.settings.always_on_top, inner.settings.show_mini_player)
+    };
+    let _ = window.set_always_on_top(on_top);
+    crate::tray::set_visible(app, mini);
+    for mode in PlayerMode::ALL {
+        if let Some(page) = app.get_webview(label(mode)) {
+            let _ = page.set_zoom(zoom);
+        }
+    }
     layout(app);
+    // Já havia um link do YouTube na área de transferência ao abrir? Oferece depois da barra montar.
+    let handle = app.clone();
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(Duration::from_millis(1200)).await;
+        let app = handle.clone();
+        let _ = handle.run_on_main_thread(move || check_clipboard(&app));
+    });
     Ok(())
 }
 
@@ -179,17 +224,22 @@ fn logical_size(window: &tauri::Window) -> (f64, f64) {
     (size.width, size.height)
 }
 
+/// Altura da faixa "Abrir link copiado" que desce abaixo da barra enquanto a oferta aparece.
+const OFFER_STRIP: f64 = 52.0;
+
 fn layout(app: &AppHandle) {
     let Some(window) = app.get_window(WINDOW) else { return };
     let (width, height) = logical_size(&window);
+    // A barra (webview do app) cresce para caber a faixa da oferta; a página desce junto.
+    let bar_height = TOOLBAR_HEIGHT + if shared(app).inner.lock().unwrap().offer_showing { OFFER_STRIP } else { 0.0 };
     let page_rect = Rect {
-        position: LogicalPosition::new(0.0, TOOLBAR_HEIGHT).into(),
-        size: LogicalSize::new(width, (height - TOOLBAR_HEIGHT).max(0.0)).into(),
+        position: LogicalPosition::new(0.0, bar_height).into(),
+        size: LogicalSize::new(width, (height - bar_height).max(0.0)).into(),
     };
     if let Some(toolbar) = app.get_webview(TOOLBAR) {
         let _ = toolbar.set_bounds(Rect {
             position: LogicalPosition::new(0.0, 0.0).into(),
-            size: LogicalSize::new(width, TOOLBAR_HEIGHT).into(),
+            size: LogicalSize::new(width, bar_height).into(),
         });
     }
     for mode in PlayerMode::ALL {
@@ -267,6 +317,7 @@ fn create_page(app: &AppHandle, mode: PlayerMode, url: &str, seek: Option<Seek>)
         LogicalSize::new(width, (height - TOOLBAR_HEIGHT).max(0.0)),
     )?;
     platform::install_ad_filter(&page, shared(app).ad_blocking.clone());
+    let _ = page.set_zoom(shared(app).inner.lock().unwrap().settings.page_zoom);
     let active = {
         let shared = shared(app);
         let mut inner = shared.inner.lock().unwrap();
@@ -331,6 +382,33 @@ fn eval(app: &AppHandle, mode: PlayerMode, js: String) {
     if let Some(page) = app.get_webview(label(mode)) {
         let _ = page.eval(js);
     }
+}
+
+/// Avalia JS na página e devolve o resultado (JSON). `js` é o corpo de uma função async (`return …`).
+/// `None` se a página não existe ou não respondeu a tempo. Usado pela conta (ler estado, limpar sessão).
+pub(crate) async fn eval_result(app: &AppHandle, mode: PlayerMode, body: &str) -> Option<Value> {
+    let page = app.get_webview(label(mode))?;
+    let (tx, rx) = tokio::sync::oneshot::channel::<String>();
+    let tx = std::sync::Mutex::new(Some(tx));
+    let wrapped = format!(
+        "(async () => {{ try {{ {body} }} catch (e) {{ return null; }} }})().then(r => JSON.stringify(r ?? null))",
+    );
+    // eval_with_callback recebe o JSON já serializado (uma string JSON, aspas incluídas).
+    if page.eval_with_callback(wrapped, move |json| {
+        if let Some(tx) = tx.lock().unwrap().take() {
+            let _ = tx.send(json);
+        }
+    }).is_err() {
+        return None;
+    }
+    let raw = tokio::time::timeout(Duration::from_secs(12), rx).await.ok()?.ok()?;
+    // O resultado chega como JSON de uma string JSON: desembrulha uma vez.
+    let inner: String = serde_json::from_str(&raw).ok()?;
+    serde_json::from_str(&inner).ok()
+}
+
+pub(crate) fn active(app: &AppHandle) -> PlayerMode {
+    shared(app).inner.lock().unwrap().active
 }
 
 fn apply_pending_seek(app: &AppHandle, mode: PlayerMode) {
@@ -471,10 +549,6 @@ pub fn open_request(app: &AppHandle, request: OpenRequest) {
     show_window(app);
 }
 
-fn active(app: &AppHandle) -> PlayerMode {
-    shared(app).inner.lock().unwrap().active
-}
-
 fn go_home(app: &AppHandle) {
     let mode = active(app);
     let fallback = js_string(&mode.home_url());
@@ -530,8 +604,72 @@ fn open_in_browser(app: &AppHandle) {
         (inner.active, state.and_then(PlaybackState::video_ref), state.and_then(|s| s.page_url.clone()))
     };
     let target = video.map(|v| v.url_for(mode)).or(url).unwrap_or_else(|| mode.home_url());
-    command(app, "pause", None);
+    if shared(app).inner.lock().unwrap().settings.pause_when_opening_in_browser {
+        command(app, "pause", None);
+    }
     let _ = app.opener().open_url(target, None::<&str>);
+}
+
+/// Área de transferência: oferece abrir um link do YouTube copiado em outro app (pílula na barra).
+fn check_clipboard(app: &AppHandle) {
+    use tauri_plugin_clipboard_manager::ClipboardExt;
+    let text = match app.clipboard().read_text() {
+        Ok(text) => text,
+        Err(e) => {
+            if std::env::var_os("VIEWTUBE_LOG").is_some() {
+                eprintln!("clipboard: leitura falhou ({e})");
+            }
+            return;
+        }
+    };
+    if std::env::var_os("VIEWTUBE_LOG").is_some() {
+        eprintln!("clipboard: '{}'", text.chars().take(80).collect::<String>());
+    }
+    let current_video = {
+        let shared = shared(app);
+        let mut inner = shared.inner.lock().unwrap();
+        if inner.last_clipboard.as_deref() == Some(text.as_str()) {
+            return;
+        }
+        inner.last_clipboard = Some(text.clone());
+        inner.states.get(&inner.active).and_then(|s| s.video_id.clone())
+    };
+    let offer = viewtube_core::ClipboardOffer::evaluate(&text, current_video.as_deref());
+    let Some(offer) = offer else { return };
+    {
+        let shared = shared(app);
+        let mut inner = shared.inner.lock().unwrap();
+        if inner.offer_showing {
+            return;
+        }
+        inner.offer_showing = true;
+    }
+    layout(app);
+    if let Some(toolbar) = app.get_webview(TOOLBAR) {
+        let _ = toolbar.eval(format!("window.vtOffer && window.vtOffer({})", json!({ "label": offer.label })));
+    }
+    // Some sozinha em 8 s (como no Mac), se o usuário não abrir nem fechar antes.
+    let handle = app.clone();
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(Duration::from_secs(8)).await;
+        let app = handle.clone();
+        let _ = handle.run_on_main_thread(move || hide_offer(&app));
+    });
+}
+
+/// Fecha a faixa da oferta e devolve a altura à página.
+fn hide_offer(app: &AppHandle) {
+    let was = {
+        let shared = shared(app);
+        let mut inner = shared.inner.lock().unwrap();
+        std::mem::replace(&mut inner.offer_showing, false)
+    };
+    if was {
+        if let Some(toolbar) = app.get_webview(TOOLBAR) {
+            let _ = toolbar.eval("window.vtOffer && window.vtOffer(null)".to_string());
+        }
+        layout(app);
+    }
 }
 
 /// Links de fora: `viewtube://…` (favorito do navegador, Atalhos) e links do YouTube.
@@ -572,6 +710,57 @@ fn set_rate(app: &AppHandle, rate: f64) {
 }
 
 pub fn toggle_setting(app: &AppHandle, key: &str) {
+    // Modo restrito é preferência da conta (cookie PREF), não um atributo da página.
+    if key == "restricted" {
+        let on = !shared(app).inner.lock().unwrap().account.preferences.restricted;
+        crate::account::set_restricted(app, on);
+        return;
+    }
+    // Ajustes de janela/app: não mexem na página, mas valem na hora.
+    let window_keys = ["keepPlaying", "miniPlayer", "pauseOnBrowser", "onTop", "tallToolbar"];
+    if window_keys.contains(&key) {
+        let value = {
+            let shared = shared(app);
+            let mut inner = shared.inner.lock().unwrap();
+            let s = &mut inner.settings;
+            let v = match key {
+                "keepPlaying" => {
+                    s.keep_playing_when_closed = !s.keep_playing_when_closed;
+                    s.keep_playing_when_closed
+                }
+                "miniPlayer" => {
+                    s.show_mini_player = !s.show_mini_player;
+                    s.show_mini_player
+                }
+                "pauseOnBrowser" => {
+                    s.pause_when_opening_in_browser = !s.pause_when_opening_in_browser;
+                    s.pause_when_opening_in_browser
+                }
+                "onTop" => {
+                    s.always_on_top = !s.always_on_top;
+                    s.always_on_top
+                }
+                "tallToolbar" => {
+                    s.tall_toolbar = !s.tall_toolbar;
+                    s.tall_toolbar
+                }
+                _ => false,
+            };
+            s.clone().save(&shared.settings_path);
+            v
+        };
+        match key {
+            "onTop" => {
+                if let Some(w) = app.get_window(WINDOW) {
+                    let _ = w.set_always_on_top(value);
+                }
+            }
+            "miniPlayer" => crate::tray::set_visible(app, value),
+            "tallToolbar" => update_toolbar(app),
+            _ => {}
+        }
+        return;
+    }
     {
         let shared = shared(app);
         let mut inner = shared.inner.lock().unwrap();
@@ -723,17 +912,27 @@ pub fn page_message(app: &AppHandle, webview_label: &str, url: Option<url::Url>,
             }
         }
         "account" => {
-            {
+            let changed = {
                 let shared = shared(app);
                 let mut inner = shared.inner.lock().unwrap();
-                inner.signed_in = msg.get("signedIn").and_then(Value::as_bool).unwrap_or(false);
+                let signed_in = msg.get("signedIn").and_then(Value::as_bool).unwrap_or(false);
+                let changed = inner.signed_in != signed_in;
+                inner.signed_in = signed_in;
                 inner.avatar = msg
                     .get("avatar")
                     .and_then(Value::as_str)
                     .filter(|a| a.starts_with("https://"))
                     .map(str::to_string);
-            }
+                if !signed_in {
+                    inner.account = crate::account::AccountState::default();
+                }
+                changed
+            };
             update_toolbar(app);
+            // Login/logout: lê a conta completa da página (contas, idioma, local) para os menus.
+            if changed && mode == active(app) {
+                refresh_account(app, mode);
+            }
         }
         "trustedClick" => {
             // Lista fechada de alvos; o ponto precisa estar dentro da página.
@@ -896,6 +1095,7 @@ pub fn update_toolbar(app: &AppHandle) {
             "playing": state.is_some_and(|s| s.playing),
             "rate": if inner.active == PlayerMode::Music { page.music_rate } else { page.video_rate },
             "signedIn": inner.signed_in,
+            "tall": inner.settings.tall_toolbar,
             "avatar": inner.avatar,
             "progress": inner.progress,
         })
@@ -924,6 +1124,16 @@ pub fn toolbar_action(app: &AppHandle, action: &str, value: Option<Value>) {
         "guide" => command(app, "guide", None),
         "search" => search(app, text),
         "browser" => open_in_browser(app),
+        // A pílula "Abrir link copiado": abre o link guardado (o mesmo que a barra mostrou).
+        "openOffer" => {
+            let text = shared(app).inner.lock().unwrap().last_clipboard.clone();
+            hide_offer(app);
+            if let Some(request) = text.as_deref().and_then(parse_incoming_text) {
+                open_request(app, request);
+            }
+        }
+        "dismissOffer" => hide_offer(app),
+        "copyLink" => copy_link(app),
         "menu" => {
             let kind = value.as_ref().and_then(|v| v.get("kind")).and_then(Value::as_str).unwrap_or("");
             let x = value.as_ref().and_then(|v| v.get("x")).and_then(Value::as_f64).unwrap_or(0.0);
@@ -931,6 +1141,20 @@ pub fn toolbar_action(app: &AppHandle, action: &str, value: Option<Value>) {
         }
         _ => {}
     }
+}
+
+/// Copia o link do que está tocando (sem o tempo), e evita oferecer de volta esse mesmo link.
+fn copy_link(app: &AppHandle) {
+    use tauri_plugin_clipboard_manager::ClipboardExt;
+    let (mode, video, url) = {
+        let shared = shared(app);
+        let inner = shared.inner.lock().unwrap();
+        let state = inner.states.get(&inner.active);
+        (inner.active, state.and_then(|s| s.video_id.clone()), state.and_then(|s| s.page_url.clone()))
+    };
+    let link = video.map(|id| VideoRef::new(id).url_for(mode)).or(url).unwrap_or_else(|| mode.home_url());
+    let _ = app.clipboard().write_text(link.clone());
+    shared(app).inner.lock().unwrap().last_clipboard = Some(link);
 }
 
 const RATES: [f64; 8] = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
@@ -952,10 +1176,10 @@ fn rate_label(rate: f64) -> String {
 /// Menus nativos da barra (velocidade, ajustes, conta), abertos logo abaixo do botão.
 fn show_menu(app: &AppHandle, kind: &str, x: f64) {
     let Some(window) = app.get_window(WINDOW) else { return };
-    let (mode, settings, signed_in) = {
+    let (mode, settings, signed_in, account) = {
         let shared = shared(app);
         let inner = shared.inner.lock().unwrap();
-        (inner.active, inner.settings.clone(), inner.signed_in)
+        (inner.active, inner.settings.clone(), inner.signed_in, inner.account.clone())
     };
     let page = &settings.page;
     let built: tauri::Result<Menu<tauri::Wry>> = (|| {
@@ -978,24 +1202,82 @@ fn show_menu(app: &AppHandle, kind: &str, x: f64) {
                     ("home", "Início personalizado (Music)", page.home),
                     ("portrait", "Retrato na tela cheia", page.portrait),
                     ("hideFullscreenChat", "Esconder chat ao vivo na tela cheia", page.hide_fullscreen_chat),
-                    ("resume", "Retomar a última sessão", settings.resume_last_session),
                 ];
                 for (key, title, on) in toggles {
                     menu.append(&CheckMenuItem::with_id(app, format!("set:{key}"), title, true, on, None::<&str>)?)?;
                 }
+                // Categorias do SponsorBlock.
+                let sb = tauri::menu::Submenu::with_id(app, "sb", "Trechos a pular", true)?;
+                for (key, title) in viewtube_core::sponsorblock::CATEGORY_NAMES {
+                    let on = settings.sponsor_categories.iter().any(|c| c == key);
+                    sb.append(&CheckMenuItem::with_id(app, format!("sbcat:{key}"), title, true, on, None::<&str>)?)?;
+                }
+                menu.append(&sb)?;
                 menu.append(&PredefinedMenuItem::separator(app)?)?;
                 let quality = tauri::menu::Submenu::with_id(app, "quality", "Qualidade do vídeo", true)?;
                 for (key, title) in QUALITY_LABELS {
                     quality.append(&CheckMenuItem::with_id(app, format!("quality:{key}"), title, true, page.quality == key, None::<&str>)?)?;
                 }
                 menu.append(&quality)?;
+                // Janela e reprodução.
+                menu.append(&PredefinedMenuItem::separator(app)?)?;
+                let window_toggles = [
+                    ("resume", "Retomar a última sessão", settings.resume_last_session),
+                    ("keepPlaying", "Continuar tocando ao fechar a janela", settings.keep_playing_when_closed),
+                    ("miniPlayer", "Ícone na bandeja", settings.show_mini_player),
+                    ("pauseOnBrowser", "Pausar ao abrir no navegador", settings.pause_when_opening_in_browser),
+                    ("onTop", "Manter na frente", settings.always_on_top),
+                    ("tallToolbar", "Barra superior maior", settings.tall_toolbar),
+                ];
+                for (key, title, on) in window_toggles {
+                    menu.append(&CheckMenuItem::with_id(app, format!("set:{key}"), title, true, on, None::<&str>)?)?;
+                }
+                let start = tauri::menu::Submenu::with_id(app, "start", "Abrir em", true)?;
+                for (key, title) in [("lastUsed", "O último usado"), ("youtube", "YouTube"), ("music", "YouTube Music")] {
+                    start.append(&CheckMenuItem::with_id(app, format!("start:{key}"), title, true, settings.start_mode == key, None::<&str>)?)?;
+                }
+                menu.append(&start)?;
+                let zoom = tauri::menu::Submenu::with_id(app, "zoom", "Zoom da página", true)?;
+                zoom.append(&MenuItem::with_id(app, "zoom:in", "Aumentar\tCtrl +", true, None::<&str>)?)?;
+                zoom.append(&MenuItem::with_id(app, "zoom:out", "Diminuir\tCtrl −", true, None::<&str>)?)?;
+                zoom.append(&MenuItem::with_id(app, "zoom:reset", "Tamanho real\tCtrl 0", true, None::<&str>)?)?;
+                menu.append(&zoom)?;
                 menu.append(&PredefinedMenuItem::separator(app)?)?;
                 menu.append(&MenuItem::with_id(app, "action:reload", "Recarregar a página", true, None::<&str>)?)?;
+                menu.append(&MenuItem::with_id(app, "action:about", "Sobre o ViewTube", true, None::<&str>)?)?;
             }
             "account" => {
-                let title = if signed_in { "Conta do Google…" } else { "Fazer login…" };
-                menu.append(&MenuItem::with_id(app, "action:account", title, true, None::<&str>)?)?;
-                menu.append(&MenuItem::with_id(app, "action:browser", "Abrir no navegador", true, None::<&str>)?)?;
+                if signed_in {
+                    if let Some(current) = account.current() {
+                        menu.append(&MenuItem::with_id(app, "noop", current.name.clone(), false, None::<&str>)?)?;
+                        if !current.subtitle().is_empty() {
+                            menu.append(&MenuItem::with_id(app, "noop2", current.subtitle(), false, None::<&str>)?)?;
+                        }
+                        menu.append(&PredefinedMenuItem::separator(app)?)?;
+                    }
+                    // Trocar para outra conta da sessão.
+                    let others: Vec<_> = account.identities.iter().filter(|i| !i.selected).collect();
+                    if !others.is_empty() {
+                        let switch = tauri::menu::Submenu::with_id(app, "switch", "Trocar de conta", true)?;
+                        for identity in others {
+                            switch.append(&MenuItem::with_id(app, format!("acct:{}", identity.id()), identity.name.clone(), true, None::<&str>)?)?;
+                        }
+                        switch.append(&PredefinedMenuItem::separator(app)?)?;
+                        switch.append(&MenuItem::with_id(app, "action:addAccount", "Adicionar outra conta…", true, None::<&str>)?)?;
+                        menu.append(&switch)?;
+                    } else {
+                        menu.append(&MenuItem::with_id(app, "action:addAccount", "Adicionar outra conta…", true, None::<&str>)?)?;
+                    }
+                    menu.append(&account_prefs_submenu(app, &account.preferences)?)?;
+                    menu.append(&MenuItem::with_id(app, "action:manage", "Gerenciar conta do Google", true, None::<&str>)?)?;
+                    menu.append(&PredefinedMenuItem::separator(app)?)?;
+                    menu.append(&MenuItem::with_id(app, "action:browser", "Abrir no navegador", true, None::<&str>)?)?;
+                    menu.append(&MenuItem::with_id(app, "action:signOut", "Sair da conta…", true, None::<&str>)?)?;
+                } else {
+                    menu.append(&MenuItem::with_id(app, "action:signIn", "Fazer login…", true, None::<&str>)?)?;
+                    menu.append(&account_prefs_submenu(app, &account.preferences)?)?;
+                    menu.append(&MenuItem::with_id(app, "action:browser", "Abrir no navegador", true, None::<&str>)?)?;
+                }
             }
             _ => {}
         }
@@ -1004,6 +1286,76 @@ fn show_menu(app: &AppHandle, kind: &str, x: f64) {
     if let Ok(menu) = built {
         let _ = window.popup_menu_at(&menu, LogicalPosition::new(x, TOOLBAR_HEIGHT - 6.0));
     }
+}
+
+/// Idiomas oferecidos (o código vai para o cookie PREF `hl`), como no Mac.
+const LANGUAGES: [(&str, &str); 25] = [
+    ("pt", "Português (Brasil)"), ("pt-PT", "Português (Portugal)"), ("en", "English (US)"), ("en-GB", "English (UK)"),
+    ("es", "Español (España)"), ("es-419", "Español (Latinoamérica)"), ("fr", "Français"), ("de", "Deutsch"),
+    ("it", "Italiano"), ("nl", "Nederlands"), ("pl", "Polski"), ("sv", "Svenska"), ("ro", "Română"), ("tr", "Türkçe"),
+    ("ru", "Русский"), ("uk", "Українська"), ("ar", "العربية"), ("hi", "हिन्दी"), ("id", "Bahasa Indonesia"),
+    ("vi", "Tiếng Việt"), ("th", "ไทย"), ("ja", "日本語"), ("ko", "한국어"), ("zh-CN", "中文 (简体)"), ("zh-TW", "中文 (繁體)"),
+];
+/// Alguns países comuns para o cookie PREF `gl` (o Mac lista todos; aqui, os mais usados).
+const COUNTRIES: [(&str, &str); 16] = [
+    ("BR", "Brasil"), ("PT", "Portugal"), ("US", "Estados Unidos"), ("GB", "Reino Unido"), ("CA", "Canadá"),
+    ("DE", "Alemanha"), ("FR", "França"), ("ES", "Espanha"), ("IT", "Itália"), ("JP", "Japão"), ("KR", "Coreia do Sul"),
+    ("MX", "México"), ("AR", "Argentina"), ("IN", "Índia"), ("AU", "Austrália"), ("NL", "Países Baixos"),
+];
+
+fn account_prefs_submenu(app: &AppHandle, prefs: &crate::account::Preferences) -> tauri::Result<tauri::menu::Submenu<tauri::Wry>> {
+    let menu = tauri::menu::Submenu::with_id(app, "prefs", "Idioma e local", true)?;
+    let lang = tauri::menu::Submenu::with_id(app, "lang", "Idioma", true)?;
+    for (code, name) in LANGUAGES {
+        lang.append(&CheckMenuItem::with_id(app, format!("lang:{code}"), name, true, prefs.language == code, None::<&str>)?)?;
+    }
+    menu.append(&lang)?;
+    let country = tauri::menu::Submenu::with_id(app, "country", "Local", true)?;
+    for (code, name) in COUNTRIES {
+        country.append(&CheckMenuItem::with_id(app, format!("country:{code}"), name, true, prefs.country == code, None::<&str>)?)?;
+    }
+    menu.append(&country)?;
+    menu.append(&CheckMenuItem::with_id(app, "set:restricted", "Modo restrito", true, prefs.restricted, None::<&str>)?)?;
+    Ok(menu)
+}
+
+/// Lê a conta completa da página (contas da sessão, idioma, local) para os menus. Tenta por alguns
+/// segundos: logo após uma troca/recarga, a página ainda pode estar sem `ytcfg`.
+fn refresh_account(app: &AppHandle, mode: PlayerMode) {
+    {
+        let shared = shared(app);
+        let mut inner = shared.inner.lock().unwrap();
+        if inner.account_busy {
+            return;
+        }
+        inner.account_busy = true;
+    }
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let mut state = None;
+        for attempt in 0..12 {
+            if attempt > 0 {
+                tokio::time::sleep(Duration::from_secs(1)).await;
+            }
+            if active(&app) != mode {
+                break;
+            }
+            if let Some(read) = crate::account::read(&app, mode).await {
+                state = Some(read);
+                break;
+            }
+        }
+        let shared = shared(&app);
+        {
+            let mut inner = shared.inner.lock().unwrap();
+            inner.account_busy = false;
+            if let Some(state) = state {
+                inner.signed_in = state.signed_in;
+                inner.account = state;
+            }
+        }
+        update_toolbar(&app);
+    });
 }
 
 /// Escolhas nos menus da barra e da bandeja.
@@ -1016,14 +1368,141 @@ pub fn menu_event(app: &AppHandle, id: &str) {
         toggle_setting(app, key);
     } else if let Some(quality) = id.strip_prefix("quality:") {
         set_quality(app, quality);
+    } else if let Some(key) = id.strip_prefix("sbcat:") {
+        toggle_sponsor_category(app, key);
+    } else if let Some(mode) = id.strip_prefix("start:") {
+        shared(app).inner.lock().unwrap().settings.start_mode = mode.to_string();
+        save_session(app, true);
+    } else if let Some(code) = id.strip_prefix("lang:") {
+        crate::account::set_language(app, code);
+    } else if let Some(code) = id.strip_prefix("country:") {
+        crate::account::set_country(app, code);
+    } else if let Some(zoom) = id.strip_prefix("zoom:") {
+        page_zoom(app, zoom);
+    } else if let Some(account_id) = id.strip_prefix("acct:") {
+        switch_account(app, account_id);
     } else if let Some(action) = id.strip_prefix("action:") {
         match action {
             "reload" => toolbar_action(app, "reload", None),
-            "account" => command(app, "account", None),
+            "about" => show_about(app),
+            "signIn" => crate::account::sign_in(app, false),
+            "addAccount" => crate::account::sign_in(app, true),
+            "manage" => open_manage_account(app),
+            "signOut" => confirm_sign_out(app),
             "browser" => open_in_browser(app),
             _ => {}
         }
     }
+}
+
+fn toggle_sponsor_category(app: &AppHandle, key: &str) {
+    let known = viewtube_core::sponsorblock::CATEGORY_NAMES.iter().any(|(k, _)| *k == key);
+    if !known {
+        return;
+    }
+    {
+        let shared = shared(app);
+        let mut inner = shared.inner.lock().unwrap();
+        let cats = &mut inner.settings.sponsor_categories;
+        if let Some(pos) = cats.iter().position(|c| c == key) {
+            cats.remove(pos);
+        } else {
+            cats.push(key.to_string());
+        }
+        // Mudou a categoria: relê os trechos do vídeo atual.
+        inner.segments_for = None;
+    }
+    save_session(app, true);
+    if let Some(state) = shared(app).inner.lock().unwrap().states.get(&active(app)).cloned() {
+        load_segments_if_needed(app, &state);
+    }
+}
+
+fn page_zoom(app: &AppHandle, action: &str) {
+    let zoom = {
+        let shared = shared(app);
+        let mut inner = shared.inner.lock().unwrap();
+        let z = &mut inner.settings.page_zoom;
+        *z = match action {
+            "in" => (*z + 0.1).min(2.0),
+            "out" => (*z - 0.1).max(0.5),
+            _ => 1.0,
+        };
+        *z
+    };
+    for mode in PlayerMode::ALL {
+        if let Some(page) = app.get_webview(label(mode)) {
+            let _ = page.set_zoom(zoom);
+        }
+    }
+    save_session(app, true);
+}
+
+fn switch_account(app: &AppHandle, account_id: &str) {
+    let (mode, identity) = {
+        let shared = shared(app);
+        let mut inner = shared.inner.lock().unwrap();
+        if inner.account_busy {
+            return;
+        }
+        let identity = inner.account.identities.iter().find(|i| i.id() == account_id).cloned();
+        if identity.is_some() {
+            inner.account_busy = true;
+        }
+        (inner.active, identity)
+    };
+    let Some(identity) = identity else { return };
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let origin = mode;
+        crate::account::switch_to(&app, origin, &identity).await;
+        shared(&app).inner.lock().unwrap().account_busy = false;
+        // A página recarregou na nova conta: lê de novo quando estabilizar.
+        refresh_account(&app, origin);
+    });
+}
+
+fn open_manage_account(app: &AppHandle) {
+    let user = shared(app).inner.lock().unwrap().account.current().map(|c| c.authuser).unwrap_or(0);
+    let _ = app.opener().open_url(format!("https://myaccount.google.com/?authuser={user}"), None::<&str>);
+}
+
+fn confirm_sign_out(app: &AppHandle) {
+    use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let ok = app
+            .dialog()
+            .message("Para voltar, é só entrar de novo.")
+            .title("Sair da conta no ViewTube?")
+            .kind(MessageDialogKind::Warning)
+            .buttons(MessageDialogButtons::OkCancelCustom("Sair".into(), "Cancelar".into()))
+            .blocking_show();
+        if ok {
+            crate::account::sign_out(&app).await;
+            {
+                let shared = shared(&app);
+                let mut inner = shared.inner.lock().unwrap();
+                inner.signed_in = false;
+                inner.account = crate::account::AccountState::default();
+            }
+            update_toolbar(&app);
+        }
+    });
+}
+
+fn show_about(app: &AppHandle) {
+    use tauri_plugin_dialog::DialogExt;
+    let version = app.package_info().version.to_string();
+    let app2 = app.clone();
+    tauri::async_runtime::spawn(async move {
+        app2.dialog()
+            .message(format!(
+                "Versão {version}\n\nO ViewTube junta YouTube e YouTube Music num app leve: troque de modo sem perder a música, com o mesmo player, volume e letra sincronizada nos dois.\n\nSoftware livre sob a GNU GPL v3.0. Não é afiliado ao Google, ao YouTube nem ao YouTube Music.\n\nUsa SponsorBlock (CC BY-NC-SA) e LRCLIB para as letras.\n\nwitchmymac.com"
+            ))
+            .title("Sobre o ViewTube")
+            .blocking_show();
+    });
 }
 
 /// Sair de verdade (pela bandeja): guarda a sessão antes.

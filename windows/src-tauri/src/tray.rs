@@ -35,6 +35,13 @@ pub fn install(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
+/// Mostra ou esconde o ícone da bandeja (ajuste "Ícone na bandeja").
+pub fn set_visible(app: &AppHandle, visible: bool) {
+    if let Some(tray) = app.tray_by_id(TRAY) {
+        let _ = tray.set_visible(visible);
+    }
+}
+
 pub fn menu_event(app: &AppHandle, id: &str) -> bool {
     match id {
         "tray:toggle" => crate::app::command(app, "toggle", None),

@@ -9,6 +9,12 @@ license.workspace = true
 name = "viewtube"
 path = "src/main.rs"
 
+[features]
+# Atualização automática (como o Sparkle no Mac). Liga por padrão; o build de release e o CI a incluem.
+# Precisa da chave de assinatura e do feed publicados (ver windows/README.md).
+default = ["updater"]
+updater = ["dep:tauri-plugin-updater"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -16,6 +22,10 @@ tauri-build = { version = "2", features = [] }
 viewtube-core = { path = "../../core" }
 tauri = { version = "2", features = ["unstable", "tray-icon", "image-png"] }
 tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-updater = { version = "2", optional = true }
+tauri-plugin-process = "2"
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 tauri-plugin-deep-link = "2"
 serde = { version = "1", features = ["derive"] }
@@ -24,7 +34,9 @@ reqwest = { version = "0.12", default-features = false, features = ["native-tls"
 souvlaki = "0.8"
 url = "2"
 tokio = { version = "1", features = ["time"] }
+cookie = "0.18"
+time = "0.3"
 
 [target.'cfg(windows)'.dependencies]
 webview2-com = "0.39"
-windows = { version = "0.62", features = ["Win32_System_Com"] }
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_System_Com"] }

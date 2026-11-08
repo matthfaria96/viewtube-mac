@@ -4,6 +4,7 @@
 //! ViewTube para Windows. A interface das páginas é a mesma do Mac (web/), o núcleo é o crate
 //! `viewtube-core`, e esta casca cuida do que é do sistema: janela, barra, bandeja, mídia e rede.
 
+mod account;
 mod app;
 mod media;
 mod net;
@@ -41,7 +42,7 @@ fn web_dir(app: &tauri::AppHandle) -> std::path::PathBuf {
 }
 
 fn main() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         // Um app só: abrir de novo (ou um link viewtube://) vai para a janela que já existe.
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             app::show_window(app);
@@ -51,6 +52,13 @@ fn main() {
         }))
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_process::init());
+    // Atualização automática: só no build com a feature "updater" (padrão; CI e release a incluem).
+    #[cfg(feature = "updater")]
+    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    builder
         .invoke_handler(tauri::generate_handler![page_message, toolbar_action])
         .on_menu_event(|app, event| {
             let id = event.id().as_ref();

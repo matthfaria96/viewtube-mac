@@ -34,11 +34,41 @@ cd windows && npx tauri build --bundles app
 
 Diagnóstico: `VIEWTUBE_LOG=1` mostra cada mensagem da ponte das páginas no terminal.
 
-## O que ainda falta em relação ao Mac
+## Paridade com o Mac
 
-- Login copiado do navegador padrão (no Mac vem das Chaves; no Windows seria pelo DPAPI). Entrar pela
-  própria página funciona.
-- Esqueletos de carregamento e a transição animada entre os modos.
-- Mini player (no Windows, a bandeja e o painel de mídia do sistema fazem esse papel).
-- Ajustes numa janela própria (hoje ficam no menu ⚙ da barra).
-- Atualização automática (no Mac é o Sparkle; aqui seria o updater do Tauri, com chave própria).
+Tudo o que o app do Mac faz, o do Windows faz:
+
+- **Conta do Google** (menu 👤): login pelo próprio site, trocar entre as contas da sessão, adicionar
+  conta, sair (só deste app), gerenciar a conta, e as preferências do YouTube (idioma, local, modo
+  restrito), pelo cookie `PREF`. Tudo pela sessão do próprio app (crate `account`).
+- **Ajustes** (menu ⚙): bloquear anúncios, SponsorBlock e suas categorias, interface limpa, teatro,
+  letras, início do Music, retrato, chat em tela cheia, qualidade; e os de janela/app: retomar a
+  sessão, continuar tocando ao fechar, ícone na bandeja, pausar ao abrir no navegador, manter na
+  frente, barra maior, "abrir em", zoom da página, e "Sobre".
+- **Abrir link copiado**: a faixa aparece abaixo da barra quando há um link do YouTube na área de
+  transferência (`ClipboardOffer` do núcleo).
+- **Atalhos**: Ctrl+L (buscar/colar), Ctrl+Shift+M (trocar de modo), Ctrl+Shift+O (abrir no
+  navegador), Ctrl+Shift+C (copiar link), Ctrl+Shift+H (início), Alt+← / Alt+→.
+- **Esqueletos de carregamento**: a geometria (`viewtube_core::skeleton`) é a mesma do Mac, com os
+  mesmos testes.
+- **Mídia do sistema** (SMTC), **bandeja**, **bloqueio de anúncios na rede** (WebView2) e **clique
+  real** para abrir/recolher o player do Music (DevTools Protocol).
+
+### Duas coisas que dependem de uma configuração sua
+
+Como no Mac, estas precisam de algo que só você pode fornecer; o mecanismo está pronto:
+
+- **Atualização automática** (feature `updater`, ligada por padrão): o Mac usa o Sparkle com a chave
+  `SUPublicEDKey`; aqui é o updater do Tauri. Gere a chave (`npx tauri signer generate`), ponha a
+  pública em `tauri.conf.json` (`plugins.updater.pubkey`) e publique o feed em
+  `plugins.updater.endpoints`. Sem isso, o app funciona; só não busca atualização.
+- **Assinatura do instalador**: sem um certificado de código, o Windows mostra o aviso do SmartScreen
+  (como o Gatekeeper no Mac para um app sem notarização). O `.exe` funciona; o aviso some com um
+  certificado de Authenticode no CI.
+
+### Não incluído de propósito
+
+- **Copiar o login do navegador padrão** sem digitar senha (o `--cookies-from-browser` do yt-dlp, que
+  o Mac faz lendo as Chaves): no Windows isso exige descriptografar o cofre de cookies de outro
+  navegador, a mesma técnica de ferramentas que roubam credenciais. Fica de fora; entrar pela própria
+  página (uma vez) cobre o caso.

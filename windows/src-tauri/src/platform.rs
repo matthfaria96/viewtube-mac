@@ -2,6 +2,7 @@
 //! - bloqueio de rede dos anúncios, as mesmas regras do `ContentBlocker.swift` (WKContentRuleList no Mac);
 //! - clique "de verdade" (o Music só abre/recolhe o player com clique real; `element.click()` não serve),
 //!   pelo DevTools Protocol (`Input.dispatchMouseEvent`), sem mexer no mouse do usuário.
+//!
 //! Fora do Windows (a prévia no Mac) os dois ficam sem efeito: o corte dos anúncios na resposta do player
 //! (web/ad-prune.js) continua valendo em qualquer motor.
 

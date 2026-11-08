@@ -51,11 +51,28 @@
   });
   query.addEventListener('blur', () => { if (!query.value.trim()) closeSearch(); });
 
+  // Faixa "Abrir link copiado" (o app controla quando aparece e some; aqui só mostra e avisa).
+  const offer = $('offer');
+  $('offer-open').addEventListener('click', () => act('openOffer'));
+  $('offer-close').addEventListener('click', () => act('dismissOffer'));
+  window.vtOffer = (o) => {
+    if (o && typeof o.label === 'string') {
+      $('offer-label').textContent = o.label;
+      offer.hidden = false;
+    } else {
+      offer.hidden = true;
+    }
+  };
+
   document.addEventListener('keydown', (e) => {
     const ctrl = e.ctrlKey || e.metaKey;
     if (e.key === 'Escape' && !box.hidden) { e.preventDefault(); closeSearch(); }
+    else if (e.key === 'Escape' && !offer.hidden) { act('dismissOffer'); }
     else if (ctrl && e.key.toLowerCase() === 'l') { e.preventDefault(); openSearch(); }
     else if (ctrl && e.shiftKey && e.key.toLowerCase() === 'm') { e.preventDefault(); act('toggleMode'); }
+    else if (ctrl && e.shiftKey && e.key.toLowerCase() === 'o') { e.preventDefault(); act('browser'); }
+    else if (ctrl && e.shiftKey && e.key.toLowerCase() === 'c') { e.preventDefault(); act('copyLink'); }
+    else if (ctrl && e.shiftKey && e.key.toLowerCase() === 'h') { e.preventDefault(); act('home'); }
     else if (e.altKey && e.key === 'ArrowLeft') { e.preventDefault(); act('back'); }
     else if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); act('forward'); }
   });
@@ -66,6 +83,7 @@
   window.vtUpdate = (s) => {
     if (!s || typeof s !== 'object') return;
     const mode = s.mode === 'music' ? 'music' : 'youtube';
+    document.documentElement.classList.toggle('tall', !!s.tall);
     sw.dataset.mode = mode;
     $('mode-youtube').setAttribute('aria-selected', String(mode === 'youtube'));
     $('mode-music').setAttribute('aria-selected', String(mode === 'music'));

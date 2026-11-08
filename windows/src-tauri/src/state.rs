@@ -23,6 +23,14 @@ pub struct PlaybackState {
     /// "full", "mini" ou "none".
     pub layout: String,
     pub live: bool,
+    /// "like", "dislike" ou "".
+    pub rating: String,
+    pub shuffle: bool,
+    pub can_shuffle: bool,
+    /// "", "all" ou "one".
+    pub repeat: String,
+    /// O cartão do player está na página (avaliar, aleatório e repetir funcionam).
+    pub has_controls: bool,
     pub sampled_at: Instant,
 }
 
@@ -54,6 +62,11 @@ impl PlaybackState {
             rate: number("rate", 1.0).min(16.0),
             layout: layout.unwrap_or("none").to_string(),
             live: msg.get("live").and_then(Value::as_bool).unwrap_or(false),
+            rating: one_of(msg, "rating", &["like", "dislike", ""]),
+            shuffle: msg.get("shuffle").and_then(Value::as_bool).unwrap_or(false),
+            can_shuffle: msg.get("canShuffle").and_then(Value::as_bool).unwrap_or(false),
+            repeat: one_of(msg, "repeat", &["all", "one", ""]),
+            has_controls: msg.get("controls").and_then(Value::as_bool).unwrap_or(false),
             sampled_at: Instant::now(),
         })
     }
@@ -89,6 +102,10 @@ impl PlaybackState {
     }
 }
 
+fn one_of(msg: &Value, key: &str, allowed: &[&str]) -> String {
+    msg.get(key).and_then(Value::as_str).filter(|v| allowed.contains(v)).unwrap_or("").to_string()
+}
+
 /// Texto curto e sem quebras (título, artista).
 fn clean(text: &str) -> String {
     text.split_whitespace().collect::<Vec<_>>().join(" ").chars().take(300).collect()
@@ -106,9 +123,21 @@ pub struct Session {
 pub struct Settings {
     pub page: PageConfig,
     pub last_mode: PlayerMode,
+    /// "lastUsed", "youtube" ou "music" (Ajustes → Geral → Abrir em).
+    pub start_mode: String,
     pub resume_last_session: bool,
     pub session: Option<Session>,
     pub sponsor_categories: Vec<String>,
+    /// A música segue tocando com a janela fechada (o app fica na bandeja).
+    pub keep_playing_when_closed: bool,
+    /// Ícone na bandeja com o mini player (o "item da barra de menus" do Mac).
+    pub show_mini_player: bool,
+    pub pause_when_opening_in_browser: bool,
+    /// Zoom das páginas (Ctrl + / Ctrl − / Ctrl 0), de 0,5 a 2.
+    pub page_zoom: f64,
+    /// Barra do app maior (botões, seletor e foto maiores).
+    pub tall_toolbar: bool,
+    pub always_on_top: bool,
 }
 
 impl Default for Settings {
@@ -116,9 +145,16 @@ impl Default for Settings {
         Self {
             page: PageConfig::default(),
             last_mode: PlayerMode::Youtube,
+            start_mode: "lastUsed".into(),
             resume_last_session: true,
             session: None,
             sponsor_categories: viewtube_core::sponsorblock::DEFAULT_CATEGORIES.iter().map(|s| s.to_string()).collect(),
+            keep_playing_when_closed: true,
+            show_mini_player: true,
+            pause_when_opening_in_browser: true,
+            page_zoom: 1.0,
+            tall_toolbar: false,
+            always_on_top: false,
         }
     }
 }
@@ -137,6 +173,12 @@ impl Settings {
         }
         p.volume = p.volume.clamp(0, 100);
         p.portrait_zoom = p.portrait_zoom.clamp(1.0, 4.0);
+        settings.page_zoom = if settings.page_zoom.is_finite() { settings.page_zoom.clamp(0.5, 2.0) } else { 1.0 };
+        if !["lastUsed", "youtube", "music"].contains(&settings.start_mode.as_str()) {
+            settings.start_mode = "lastUsed".into();
+        }
+        let known = viewtube_core::sponsorblock::CATEGORY_NAMES;
+        settings.sponsor_categories.retain(|c| known.iter().any(|(k, _)| k == c));
         settings
     }
 
