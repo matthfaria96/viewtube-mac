@@ -9,6 +9,7 @@ pub mod lyrics;
 pub mod mode;
 pub mod navigation;
 pub mod pref_cookie;
+pub mod skeleton;
 pub mod sponsorblock;
 pub mod time_param;
 pub mod video_ref;
