@@ -1,0 +1,305 @@
+(() => {
+  if (window.__viewtubePlayerPage || location.hostname !== 'music.youtube.com') return;
+  window.__viewtubePlayerPage = true;
+  let more = null, lastVideo = null, autoSelected = false, userPickedTab = false;
+  const page = () => document.querySelector('ytmusic-player-page#player-page');
+  const side = () => document.querySelector('ytmusic-player-page #side-panel');
+  const queueBox = () => document.querySelector('ytmusic-player-page #tab-renderer > div:has(> ytmusic-queue-header-renderer)');
+  const queueList = () => queueBox()?.querySelector('ytmusic-player-queue');
+  const tabs = () => [...document.querySelectorAll('ytmusic-player-page tp-yt-paper-tab')];
+  const videoId = () => { try { return document.getElementById('movie_player')?.getVideoData?.().video_id; } catch (_) { return null; } };
+  const post = (m) => { try { window.webkit.messageHandlers.viewtube.postMessage(m); } catch (_) {} };
+
+  const ensureMore = () => {
+    const host = side(), box = queueBox(), list = queueList();
+    if (!host || !box || !list) return;
+    if (!more) {
+      more = document.createElement('button');
+      more.id = 'viewtube-queue-more';
+      more.type = 'button';
+      more.addEventListener('click', () => {
+        const current = queueBox();   // o Music pode ter recriado a fila
+        if (!current) return;
+        const expanded = current.classList.toggle('vt-expanded');
+        more.textContent = expanded ? 'Ver menos' : 'Ver mais';
+        if (!expanded) current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      });
+    }
+    if (more.parentElement !== host) host.appendChild(more);
+    const expanded = box.classList.contains('vt-expanded');
+    more.textContent = expanded ? 'Ver menos' : 'Ver mais';
+    // Sem mais que 3 linhas em nenhuma grade, não há o que expandir.
+    const grids = [...list.querySelectorAll('#contents, #automix-contents')];
+    // Grade escondida (teatro compacto) com itens também conta como "tem mais".
+    const hasMore = (g) => (getComputedStyle(g).display === 'none' ? g.children.length > 0 : g.scrollHeight > g.clientHeight + 4);
+    more.hidden = !expanded && !grids.some(hasMore);
+  };
+
+  // ---- Teatro: abas próprias Letra | Comentários | Relacionados (no visual das do YouTube) ----
+  // A aba Letra mostra a letra animada do app; as outras acionam as abas reais do Music (escondidas).
+  let musicTabs = null, tabsInTheater = false, queueArrows = null;
+  const selectMusicTab = (name) => {
+    document.documentElement.setAttribute('vt-music-tab', name);
+    musicTabs?.querySelectorAll('button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+    if (name === 'lyrics') return;
+    const list = tabs();
+    const target = name === 'comments' ? list.find((t) => /coment/i.test(t.textContent)) : list[list.length - 1];
+    if (target && target.getAttribute('aria-selected') !== 'true') pick(target);
+  };
+  const ensureMusicTabs = () => {
+    const html = document.documentElement;
+    const host = side();
+    if (!html.hasAttribute('vt-stacked') || !host) {
+      if (musicTabs) musicTabs.hidden = true;
+      tabsInTheater = false;
+      return;
+    }
+    if (!musicTabs) {
+      musicTabs = document.createElement('div');
+      musicTabs.id = 'viewtube-music-tabs';
+      musicTabs.setAttribute('role', 'tablist');
+      [['lyrics', 'Letra'], ['comments', 'Comentários'], ['related', 'Relacionados']].forEach(([tab, label]) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.dataset.tab = tab;
+        b.setAttribute('role', 'tab');
+        b.textContent = label;
+        b.addEventListener('click', (e) => { e.stopPropagation(); selectMusicTab(tab); });
+        musicTabs.appendChild(b);
+      });
+    }
+    if (musicTabs.parentElement !== host) host.appendChild(musicTabs);
+    musicTabs.hidden = false;
+    const lyricsOn = html.hasAttribute('vt-lyrics-on');
+    musicTabs.querySelector('[data-tab="lyrics"]').hidden = !lyricsOn;
+    musicTabs.querySelector('[data-tab="comments"]').hidden = !tabs().some((t) => /coment/i.test(t.textContent));
+    // Entrando no teatro, abre a Letra (ou Relacionados, com as letras desligadas).
+    if (!tabsInTheater) { tabsInTheater = true; selectMusicTab(lyricsOn ? 'lyrics' : 'related'); }
+  };
+  // Setas < > ao lado do "Salvar" para o carrossel de "A seguir" (só no teatro, pelo CSS).
+  const ensureQueueArrows = () => {
+    const box = queueBox();
+    if (!box) return;
+    if (!queueArrows) {
+      queueArrows = document.createElement('div');
+      queueArrows.id = 'viewtube-queue-arrows';
+      [['prev', 'Anteriores', 'M15.4 7.4 14 6l-6 6 6 6 1.4-1.4-4.6-4.6z', -1], ['next', 'Próximas', 'M8.6 16.6 10 18l6-6-6-6-1.4 1.4 4.6 4.6z', 1]].forEach(([name, label, d, dir]) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.title = label;
+        b.setAttribute('aria-label', label);
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        svg.appendChild(path);
+        b.appendChild(svg);
+        b.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const strip = document.querySelector('ytmusic-player-page ytmusic-player-queue#queue');
+          strip?.scrollBy({ left: dir * strip.clientWidth * 0.8, behavior: 'smooth' });
+        });
+        queueArrows.appendChild(b);
+      });
+    }
+    if (queueArrows.parentElement !== box) box.appendChild(queueArrows);
+  };
+
+  // Botão "Compartilhar" ao lado do "Salvar" (à esquerda), no mesmo estilo de pílula.
+  // Abre o compartilhamento nativo do próprio YouTube Music: menu (⋮) da faixa → "Compartilhar".
+  let shareBtn = null;
+  const nativeShare = () => {
+    const trigger = window.__viewtubeMusicBar?.menuButton()
+      || document.querySelector('ytmusic-player-page ytmusic-menu-renderer')?.querySelector('#button, yt-icon-button#button, button');
+    if (!trigger) return;
+    trigger.click();
+    setTimeout(() => {
+      const items = [...document.querySelectorAll(
+        'tp-yt-iron-dropdown :is(ytmusic-menu-service-item-renderer, ytmusic-menu-navigation-item-renderer), '
+        + 'ytmusic-menu-popup-renderer :is(ytmusic-menu-service-item-renderer, ytmusic-menu-navigation-item-renderer)')];
+      const share = items.find((i) => /compartilhar|share/i.test(i.textContent || ''));
+      if (!share) return;
+      (share.querySelector('button, a, ytmusic-menu-service-item-renderer') || share).click();
+    }, 200);
+  };
+  const ensureShare = () => {
+    const header = document.querySelector('ytmusic-player-page ytmusic-queue-header-renderer');
+    if (!header) return;
+    if (!shareBtn) {
+      shareBtn = document.createElement('button');
+      shareBtn.id = 'viewtube-share';
+      shareBtn.type = 'button';
+      shareBtn.title = 'Compartilhar';
+      shareBtn.setAttribute('aria-label', 'Compartilhar');
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', 'M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z');
+      svg.appendChild(path);
+      shareBtn.appendChild(svg);
+      shareBtn.addEventListener('click', (e) => { e.stopPropagation(); nativeShare(); });
+    }
+    const cloud = header.querySelector('ytmusic-chip-cloud-renderer');
+    const firstChip = cloud?.querySelector('ytmusic-chip-cloud-chip-renderer') || null;
+    const parent = firstChip?.parentElement || cloud || header;
+    // Insere antes do primeiro chip ("Salvar") para ficar à esquerda dele.
+    if (shareBtn.parentElement !== parent || (firstChip && shareBtn.nextElementSibling !== firstChip)) {
+      parent.insertBefore(shareBtn, firstChip);
+    }
+  };
+
+  // Empilhado (`vt-stacked`): teatro, ou janela abaixo de 1024 px como a quebra do YouTube para
+  // uma coluna. A letra desce para as abas, embaixo do player, como no teatro.
+  const narrow = matchMedia('(max-width: 1023px)');
+  const updateStacked = () => {
+    const html = document.documentElement;
+    const on = html.hasAttribute('vt-theater') || narrow.matches;
+    if (html.hasAttribute('vt-stacked') !== on) html.toggleAttribute('vt-stacked', on);
+  };
+  narrow.addEventListener('change', () => { updateStacked(); update(); });
+  window.addEventListener('viewtube:config', () => { updateStacked(); update(); });
+
+  const update = () => {
+    updateStacked();
+    const p = page();
+    if (!p || !p.hasAttribute('player-page-open')) return;
+    ensureMore();
+    ensureMusicTabs();
+    ensureQueueArrows();
+    ensureShare();
+    // Faixa nova: Relacionados pode abrir de novo (a grade "A seguir" fica como o usuário deixou).
+    const id = videoId();
+    if (id && id !== lastVideo) {
+      lastVideo = id;
+      autoSelected = false;
+    }
+    // Embaixo fica Relacionados aberto (A seguir já está em cima). Uma vez por faixa e nunca
+    // por cima de uma escolha do usuário.
+    const list = tabs();
+    const selected = list.findIndex((t) => t.getAttribute('aria-selected') === 'true');
+    // A aba "Letra" fica escondida (a letra do app está na coluna da direita ou, no teatro, num
+    // bloco depois de "A seguir"): ela nunca fica aberta embaixo.
+    const html = document.documentElement;
+    if (selected === 1 && list.length >= 3 && html.hasAttribute('vt-lyrics-on')) {
+      pick(list[list.length - 1]);
+      return;
+    }
+    if (!autoSelected && !userPickedTab && list.length >= 3 && selected === 0) {
+      autoSelected = true;
+      // O Music rola até a aba clicada; a página deve continuar onde estava.
+      const scroller = document.querySelector('ytmusic-player-page#player-page .content');
+      const top = scroller ? scroller.scrollTop : 0;
+      list[list.length - 1].click();
+      const restore = () => scroller?.scrollTo({ top, behavior: 'instant' });
+      requestAnimationFrame(() => { restore(); requestAnimationFrame(restore); });
+    }
+  };
+
+  // Clica numa aba sem a página pular (o Music rola até a aba clicada).
+  const pick = (tab) => {
+    const scroller = document.querySelector('ytmusic-player-page#player-page .content');
+    const top = scroller ? scroller.scrollTop : 0;
+    tab?.click();
+    const restore = () => scroller?.scrollTo({ top, behavior: 'instant' });
+    requestAnimationFrame(() => { restore(); requestAnimationFrame(restore); });
+  };
+
+  // Teatro: a roda do mouse (vertical) rola o carrossel de "A seguir" para o lado, enquanto houver
+  // para onde ir; nas pontas, a página volta a rolar normalmente.
+  document.addEventListener('wheel', (e) => {
+    if (!document.documentElement.hasAttribute('vt-stacked') || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    const strip = e.target.closest?.('ytmusic-player-page ytmusic-player-queue#queue');
+    if (!strip) return;
+    const max = strip.scrollWidth - strip.clientWidth;
+    if ((e.deltaY > 0 && strip.scrollLeft >= max - 1) || (e.deltaY < 0 && strip.scrollLeft <= 0)) return;
+    strip.scrollLeft += e.deltaY;
+    e.preventDefault();
+  }, { passive: false, capture: true });
+
+  // Carrossel (empilhado): clicar e arrastar rola para os lados, com um pouco de inércia ao soltar.
+  // O arraste nativo do item e o reordenar da fila do Music ficam bloqueados, e um arraste não vira clique.
+  const carousel = (target) => document.documentElement.hasAttribute('vt-stacked')
+    && target.closest?.('ytmusic-player-page ytmusic-player-queue#queue');
+  let drag = null, inertia = 0, suppressClick = false;
+  document.addEventListener('dragstart', (e) => { if (carousel(e.target)) e.preventDefault(); }, true);
+  document.addEventListener('mousedown', (e) => {
+    const strip = e.button === 0 && carousel(e.target);
+    if (!strip) return;
+    cancelAnimationFrame(inertia);
+    e.preventDefault();   // sem seleção de texto nem arraste nativo
+    drag = { strip, x: e.clientX, left: strip.scrollLeft, moved: false, lastX: e.clientX, lastT: performance.now(), v: 0 };
+  }, true);
+  // O Music reordena a fila arrastando o item (por JS, não pelo arraste nativo): enquanto o
+  // botão estiver apertado no carrossel, o movimento é só nosso e nenhum card sai do lugar.
+  ['pointermove', 'touchmove'].forEach((name) => document.addEventListener(name, (e) => {
+    if (drag) e.stopImmediatePropagation();
+  }, true));
+  document.addEventListener('mousemove', (e) => {
+    if (!drag) return;
+    e.stopImmediatePropagation();
+    if (e.buttons === 0) { endDrag(); return; }   // soltou fora da janela
+    const dx = e.clientX - drag.x;
+    if (!drag.moved && Math.abs(dx) < 5) return;
+    if (!drag.moved) { drag.moved = true; drag.strip.style.cursor = 'grabbing'; }
+    drag.strip.scrollLeft = drag.left - dx;
+    const now = performance.now();
+    drag.v = (e.clientX - drag.lastX) / Math.max(1, now - drag.lastT);   // px/ms
+    drag.lastX = e.clientX; drag.lastT = now;
+  }, true);
+  const endDrag = () => {
+    if (!drag) return;
+    const { strip, moved } = drag;
+    // Parou antes de soltar: sem inércia.
+    let v = performance.now() - drag.lastT > 80 ? 0 : drag.v;
+    drag = null;
+    strip.style.cursor = '';
+    if (!moved) return;
+    suppressClick = true;
+    setTimeout(() => { suppressClick = false; }, 0);
+    // Inércia: continua na mesma direção e desacelera.
+    let last = performance.now();
+    const glide = (now) => {
+      const dt = now - last; last = now;
+      strip.scrollLeft -= v * dt;
+      v *= Math.pow(0.94, dt / 16);
+      if (Math.abs(v) > 0.02) inertia = requestAnimationFrame(glide);
+    };
+    if (Math.abs(v) > 0.1) inertia = requestAnimationFrame(glide);
+  };
+  document.addEventListener('mouseup', endDrag, true);
+  document.addEventListener('click', (e) => {
+    if (suppressClick && carousel(e.target)) { e.preventDefault(); e.stopImmediatePropagation(); }
+  }, true);
+  // Item do "A seguir": o Music só troca a faixa pelo botão de play (32 px no meio da capa); o
+  // título e o resto do card não faziam nada. O card inteiro toca, menos o menu (⋮) e "Salvar".
+  document.addEventListener('click', (e) => {
+    if (!e.isTrusted || e.button !== 0) return;
+    const item = e.target.closest?.('ytmusic-player-page ytmusic-player-queue-item');
+    if (!item || item.hasAttribute('selected')) return;
+    if (e.target.closest('ytmusic-play-button-renderer, ytmusic-menu-renderer, yt-button-shape, button, a[href]')) return;
+    // Depois do clique: o Music marca o item como atual na hora, e o aviso "Abrindo…" o ignoraria.
+    const play = item.querySelector('ytmusic-play-button-renderer');
+    if (play) setTimeout(() => play.click(), 0);
+  }, true);
+  document.addEventListener('click', (e) => {
+    if (e.isTrusted && e.target.closest?.('ytmusic-player-page tp-yt-paper-tab')) userPickedTab = true;
+  }, true);
+  // Troca de faixa/vídeo: o site refaz partes da página. Por ~2,5 s confere a cada 0,1 s (o intervalo
+  // normal é bem maior). A cada quadro brigava com o redesenho do site e deixava a troca lenta.
+  let burstUntil = 0, burstFrame = 0;
+  const burst = () => {
+    burstUntil = performance.now() + 2500;
+    if (burstFrame) return;
+    const tick = () => {
+      burstFrame = 0;
+      if (document.hidden) return;
+      update();
+      if (performance.now() < burstUntil) burstFrame = setTimeout(tick, 100);
+    };
+    burstFrame = setTimeout(tick, 0);
+  };
+  ['loadstart', 'emptied'].forEach((name) => document.addEventListener(name, (e) => {
+    if (e.target instanceof HTMLMediaElement) burst();
+  }, true));
+  setInterval(() => { if (!document.hidden) update(); }, 700);
+})();

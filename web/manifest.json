@@ -1,0 +1,22 @@
+{
+  "_comment": "Ordem de injeção, igual nos dois apps. __VT_CSS(nome.css)__ vira o conteúdo do arquivo como string JS.",
+  "documentStart": [
+    "ad-prune.js"
+  ],
+  "documentEnd": [
+    "bridge.js",
+    "style.js",
+    "portrait.js",
+    "fullscreen-chat.js",
+    "lyrics.js",
+    "player-page.js",
+    "player-controls.js",
+    "youtube-mini.js",
+    "music-home.js",
+    "account.js",
+    "youtube-watch.js",
+    "music-immersive.js",
+    "click-feedback.js"
+  ],
+  "pageFlags": "page-flags.js"
+}

@@ -1,0 +1,143 @@
+#viewtube-immersive {
+  position: fixed; inset: 0; z-index: 2147483000; overflow: hidden; background: #000; color: #fff;
+  display: none; -webkit-font-smoothing: antialiased; font-family: Roboto, Arial, sans-serif;
+}
+html[vt-immersive] #viewtube-immersive { display: block; }
+#viewtube-immersive .vt-imm-bg {
+  position: absolute; inset: -12%; width: 124%; height: 124%; object-fit: cover;
+  filter: blur(70px) saturate(1.5) brightness(.45); transform: scale(1.15);
+  animation: vt-imm-drift 38s ease-in-out infinite alternate; will-change: transform;
+}
+@keyframes vt-imm-drift {
+  from { transform: scale(1.15) translate(-2%, -1%) rotate(0deg); }
+  to { transform: scale(1.3) translate(2%, 1.5%) rotate(4deg); }
+}
+#viewtube-immersive .vt-imm-shade {
+  position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 35%, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, .55) 100%);
+}
+#viewtube-immersive .vt-imm-stage {
+  position: relative; height: 100%; box-sizing: border-box; padding: 7vh 6vw 190px;
+  display: flex; flex-direction: column; align-items: center;
+}
+#viewtube-immersive .vt-imm-art {
+  position: relative; flex: none; width: min(38vh, 70vw); aspect-ratio: 1; border-radius: 18px; overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .55); transition: transform .4s ease;
+}
+#viewtube-immersive .vt-imm-cover { display: block; width: 100%; height: 100%; object-fit: cover; cursor: pointer; transition: filter .3s ease; }
+#viewtube-immersive .vt-imm-art:hover { transform: scale(1.015); }
+#viewtube-immersive.vt-paused .vt-imm-art { transform: scale(.97); }
+#viewtube-immersive.vt-paused .vt-imm-cover { filter: brightness(.7); }
+/* Progresso na borda de baixo da capa. */
+#viewtube-immersive .vt-imm-art-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: rgba(255, 255, 255, .22); pointer-events: none; }
+#viewtube-immersive .vt-imm-art-fill {
+  height: 100%; width: 100%; transform-origin: left center; transform: scaleX(0);
+  background: linear-gradient(90deg, #ff6b9e, #f0213d); transition: transform .25s linear;
+}
+#viewtube-immersive .vt-imm-title { margin-top: 26px; font-size: clamp(22px, 2.6vh, 36px); font-weight: 700; text-align: center; max-width: 90vw;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#viewtube-immersive .vt-imm-artist { margin-top: 6px; font-size: clamp(14px, 1.6vh, 21px); color: rgba(255, 255, 255, .7); text-align: center; }
+#viewtube-immersive .vt-imm-lyrics { flex: 1; min-height: 0; width: min(760px, 88vw); margin-top: 3vh; }
+/* Sem letra (ou letras desligadas): capa maior, no centro. */
+#viewtube-immersive.vt-no-lyrics .vt-imm-stage { justify-content: center; padding-bottom: 170px; }
+#viewtube-immersive.vt-no-lyrics .vt-imm-art { width: min(56vh, 76vw); }
+#viewtube-immersive.vt-no-lyrics .vt-imm-lyrics { display: none; }
+/* A letra do app (a mesma da coluna da direita), centralizada e maior. */
+html[vt-layout][vt-immersive] #viewtube-immersive #viewtube-lyrics-section {
+  display: flex !important; position: relative !important; inset: auto !important; width: 100% !important; height: 100% !important;
+  margin: 0 !important; padding: 0 !important; background: none !important; border: 0 !important; z-index: auto !important;
+}
+html[vt-layout][vt-immersive] #viewtube-immersive .viewtube-section-title { display: none !important; }
+/* Ajuste de sincronia no centro, acima da letra, sempre aberto numa linha; some junto com o player. */
+html[vt-layout][vt-immersive] #viewtube-immersive .vt-lyrics-header { display: none !important; }
+html[vt-layout][vt-immersive] #viewtube-immersive .vt-lyrics-sync {
+  position: static; order: -1; align-self: center; margin-bottom: 4px; transition: opacity .35s ease, transform .35s ease;
+}
+html[vt-layout][vt-immersive] #viewtube-immersive .vt-sync-toggle { display: none; }
+html[vt-layout][vt-immersive] #viewtube-immersive .vt-sync-panel {
+  display: flex; flex-direction: row; gap: 8px; padding: 3px 4px 3px 10px; border-radius: 999px; animation: none;
+  background: rgba(20, 20, 20, .42); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1);
+}
+#viewtube-immersive.vt-idle .vt-lyrics-sync { opacity: 0; transform: translateY(-6px); pointer-events: none; }
+html[vt-layout][vt-immersive] #viewtube-immersive #viewtube-lyrics {
+  /* O espaço embaixo deixa as últimas linhas subirem até o foco, sem passar da altura da área (senão vaza sob o player). */
+  padding: 3vh 7% var(--vt-tail, 22vh) !important; text-align: center; box-sizing: border-box;
+  -webkit-mask-image: linear-gradient(transparent, #000 12%, #000 70%, transparent);
+  mask-image: linear-gradient(transparent, #000 12%, #000 70%, transparent);
+}
+html[vt-layout][vt-immersive] #viewtube-immersive #viewtube-lyrics p {
+  font-size: calc(clamp(20px, min(3.2vh, 4.6vw), 34px) * var(--vt-fit, 1)); line-height: 1.3; margin-bottom: 22px; color: rgba(255, 255, 255, .38);
+  transform-origin: center center; margin-right: 0; overflow-wrap: break-word;
+}
+html[vt-layout][vt-immersive] #viewtube-immersive #viewtube-lyrics p.active { color: #fff; transform: scale(1.04); }
+html[vt-layout][vt-immersive] #viewtube-immersive .vt-lyrics-message { padding: 4vh 0 0; color: rgba(255, 255, 255, .6); }
+/* Player da tela imersiva: pílula de vidro embaixo (progresso, tempos, anterior/play/próxima).
+   Some depois de 3 s sem mexer o mouse enquanto toca; volta ao mover ou pausar. */
+#viewtube-immersive .vt-imm-dock {
+  position: absolute; left: 50%; bottom: 4vh; transform: translateX(-50%); width: min(clamp(640px, 46vw, 860px), 92vw); box-sizing: border-box;
+  padding: 14px 22px 12px; border-radius: 26px; background: rgba(20, 20, 20, .42);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5); backdrop-filter: blur(28px) saturate(1.5);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1), 0 18px 50px rgba(0, 0, 0, .4);
+  transition: opacity .35s ease, transform .35s ease;
+}
+/* Player fixo na tela imersiva (pedido): fica sempre visível, não some com o mouse parado. */
+#viewtube-immersive.vt-idle .vt-imm-dock { opacity: 1; transform: translateX(-50%); pointer-events: auto; }
+#viewtube-immersive.vt-idle { cursor: none; }
+#viewtube-immersive .vt-imm-progress { display: flex; align-items: center; gap: 12px; }
+#viewtube-immersive .vt-imm-time { width: 44px; font-size: 12px; color: rgba(255, 255, 255, .7); font-variant-numeric: tabular-nums; }
+#viewtube-immersive .vt-imm-time.vt-end { text-align: right; }
+#viewtube-immersive .vt-imm-seek {
+  -webkit-appearance: none; appearance: none; flex: 1; height: 4px; margin: 6px 0; border-radius: 4px; cursor: pointer;
+  background: linear-gradient(90deg, #ff6b9e, #f0213d) 0 / var(--vt-fill, 0%) 100% no-repeat, rgba(255, 255, 255, .2);
+  transition: height .15s ease, margin .15s ease;
+}
+#viewtube-immersive .vt-imm-seek:hover { height: 6px; margin: 5px 0; }
+#viewtube-immersive .vt-imm-seek::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, .5); transform: scale(0); transition: transform .15s ease;
+}
+#viewtube-immersive .vt-imm-seek:hover::-webkit-slider-thumb, #viewtube-immersive .vt-imm-seek:active::-webkit-slider-thumb { transform: scale(1); }
+/* Três áreas: pílulas laterais com a mesma largura, como no player normal. */
+#viewtube-immersive .vt-imm-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); column-gap: 16px; align-items: center; margin-top: 8px; }
+#viewtube-immersive .vt-imm-pill {
+  display: flex; align-items: center; min-width: 0; height: 42px; box-sizing: border-box; padding: 0 6px; border-radius: 999px;
+  background: rgba(255, 255, 255, .07); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .07);
+}
+#viewtube-immersive .vt-imm-left { justify-content: space-between; }
+/* Música | Vídeo: o mesmo seletor do player normal (pílula rosa no lado escolhido). */
+#viewtube-immersive .vt-imm-view { display: inline-flex; flex: none; padding: 3px; gap: 2px; border-radius: 999px; background: rgba(255, 255, 255, .07); }
+#viewtube-immersive .vt-imm-view button { width: auto !important; height: 28px !important; padding: 0 10px !important; border-radius: 999px !important; opacity: .7; }
+#viewtube-immersive .vt-imm-view button svg { width: 17px !important; height: 17px !important; }
+#viewtube-immersive .vt-imm-view button.selected { opacity: 1; background: linear-gradient(135deg, #ff6b9e, #f0213d) !important; box-shadow: 0 2px 8px rgba(240, 33, 61, .4); }
+#viewtube-immersive .vt-imm-right { gap: 6px; }
+#viewtube-immersive .vt-imm-divider { flex: none; width: 1px; height: 18px; margin: 0 2px; background: rgba(255, 255, 255, .16); }
+#viewtube-immersive .vt-imm-icon { width: 32px !important; height: 32px !important; flex: none; }
+#viewtube-immersive .vt-imm-icon svg { width: 19px !important; height: 19px !important; }
+#viewtube-immersive .vt-imm-icon.on { color: #ff6b9e; opacity: 1; }
+#viewtube-immersive .vt-imm-icon[hidden] { display: none; }
+#viewtube-immersive .vt-imm-repeat { position: relative; }
+#viewtube-immersive .vt-imm-one { display: none; position: absolute; top: 5px; right: 5px; font-size: 9px; font-weight: 800; }
+#viewtube-immersive .vt-imm-repeat.one .vt-imm-one { display: block; }
+#viewtube-immersive .vt-imm-vol {
+  -webkit-appearance: none; appearance: none; flex: 1; min-width: 40px; height: 4px; border-radius: 4px; cursor: pointer;
+  background: linear-gradient(90deg, #ff6b9e, #f0213d) 0 / var(--vt-fill, 100%) 100% no-repeat, rgba(255, 255, 255, .2);
+}
+#viewtube-immersive .vt-imm-vol::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #fff; box-shadow: 0 1px 5px rgba(0, 0, 0, .5);
+  transform: scale(0); transition: transform .15s ease;
+}
+#viewtube-immersive .vt-imm-vol:hover::-webkit-slider-thumb, #viewtube-immersive .vt-imm-vol:active::-webkit-slider-thumb { transform: scale(1); }
+#viewtube-immersive .vt-imm-buttons { display: flex; align-items: center; justify-content: center; gap: 14px; }
+#viewtube-immersive .vt-imm-dock button {
+  border: 0; padding: 0; background: none; color: #fff; cursor: pointer; display: grid; place-items: center;
+  width: 40px; height: 40px; border-radius: 50%; opacity: .85; transition: background .15s ease, opacity .15s ease, transform .1s ease;
+}
+#viewtube-immersive .vt-imm-dock button:hover { background: rgba(255, 255, 255, .1); opacity: 1; }
+#viewtube-immersive .vt-imm-dock button:active { transform: scale(.92); }
+#viewtube-immersive .vt-imm-dock svg { width: 26px; height: 26px; fill: currentColor; }
+#viewtube-immersive .vt-imm-buttons .vt-imm-play {
+  width: 54px; height: 54px; opacity: 1; background: linear-gradient(135deg, #ff6b9e, #f0213d);
+  box-shadow: 0 8px 22px rgba(240, 33, 61, .45);
+}
+#viewtube-immersive .vt-imm-buttons .vt-imm-play:hover { background: linear-gradient(135deg, #ff7aa8, #f5324c); }
+#viewtube-immersive .vt-imm-buttons .vt-imm-play svg { width: 28px; height: 28px; }
+@media (prefers-reduced-motion: reduce) { #viewtube-immersive .vt-imm-bg { animation: none; } }
