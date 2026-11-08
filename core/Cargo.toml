@@ -1,0 +1,15 @@
+[package]
+name = "viewtube-core"
+description = "Lógica pura do ViewTube (links, modos, SponsorBlock, letras, scripts web), igual à do ViewTubeCore em Swift."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+sha2 = "0.10"
+url = "2"
+
+[dev-dependencies]
+url = "2"

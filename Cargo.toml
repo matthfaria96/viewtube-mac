@@ -1,0 +1,17 @@
+# Workspace Rust: o núcleo compartilhado (core/) e o app do Windows (windows/src-tauri/).
+# O app do Mac continua em Swift (Package.swift).
+[workspace]
+resolver = "2"
+members = ["core"]
+
+[workspace.package]
+version = "1.0.9"
+edition = "2021"
+license = "GPL-3.0-or-later"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
